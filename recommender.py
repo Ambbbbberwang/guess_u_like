@@ -76,7 +76,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
 def train_val_test_split(spark, records_pq, seed=42):
 
     # number of distinct users for checking
-    print(records_pq.select('user_id').distinct().count())
+    #print(records_pq.select('user_id').distinct().count())
 
     # Splitting procedure: 
     # Select 60% of users (and all of their interactions).
@@ -90,23 +90,19 @@ def train_val_test_split(spark, records_pq, seed=42):
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
-    train.select('user_id').distinct().count()
+    train.show()
+    print(train.select('user_id').distinct().count())
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
     test_val.show()
-    test_val.select('user_id').distinct().count()
-    test_val=test_val.join(records_pq, ['user_id'])
-    #train.show()
-    test_val.show() 
+    print(test_val.select('user_id').distinct().count())
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
-    val=users.sample(False, fraction=0.5, seed=seed)
-    user_samp.show()
-    test=test_val.join(user_samp, ['user_id']) 
+    user_samp=users.sample(False, fraction=0.5, seed=seed)
+    test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
-    val=test_val.join(val, ['user_id'])
 
     val.show()
     test.show()
