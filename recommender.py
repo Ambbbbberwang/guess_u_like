@@ -93,12 +93,14 @@ def train_val_test_split(spark, records_pq, seed=42):
     test_val=user_samp.join(records_pq, ['user_id'], 'left_anti')
 
     train.show()
+    test_val.show()
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.5, seed=seed)
+    user_samp.show()
     test=user_samp.join(test_val, ['user_id']) 
     val=user_samp.join(test_val, ['user_id'], 'left_anti')
 
