@@ -61,8 +61,8 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         records=spark_df.join(user_samp, ['user_id'])
         
         # check that this matches the desired percentage
-        #print(records.select('user_id').distinct().count()) #--> 7711 
-        #print(spark_df.select('user_id').distinct().count()) #--> 766717 
+        #print(records.select('user_id').distinct().count()) 
+        #print(spark_df.select('user_id').distinct().count())  
 
         # write to parquet format
         # note: this will fail if the path already exists - remove the file with "hadoop fs -rm -r onepct_int.parquet"
@@ -90,12 +90,10 @@ def train_val_test_split(spark, records_pq, seed=42):
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
-    train.show()
-    print(train.select('user_id').distinct().count())
-    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    test_val.show()
-    print(test_val.select('user_id').distinct().count())
+    #train.show()
     #print(train.select('user_id').distinct().count())
+    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
+    #test_val.show()
     #print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
@@ -103,61 +101,41 @@ def train_val_test_split(spark, records_pq, seed=42):
     user_samp=users.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
-
-    val.show()
-    test.show()
+    print(test.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
 
     # split the validation set into 50/50 interactions
     val_train=val.sample(False, fraction=0.5, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(val_train)
-    val.show()
+    print(val.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
 
     # same for test set
     test_train=test.sample(False, fraction=0.5, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(test_train)
-    test.show()
-    #import pandas as pd
+    print(test.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
 
-    #temp=test.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
-    #keys = list(temp.columns.values) 
-    #i1 = test.set_index(keys).index
-    #i2 = temp.set_index(keys).index
-    #test_train = test[~i1.isin(i2)]
-    #test = temp
-
-    #temp=val.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
-    #keys = list(temp.columns.values) 
-    #i1 = val.set_index(keys).index
-    #i2 = temp.set_index(keys).index
-    #val_train = val[~i1.isin(i2)]
-    #val = temp
-
-    # add back to the training set
-    #train=pd.concat([train, val_train, test_train], axis=0)
-
-    # TO DO: remove items that are not observed in training from all three datasets
+    # TO DO: remove items that are not in training from all three datasets
+    items=train.select('book_id').distinct()
+    train=train.join(items)
+    val=val.join(items, ['book_id'], 'left_anti')
+    test=test.join(items, ['book_id'], 'left_anti')
     
-    #train=spark.createDataFrame(train, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
-    #val=spark.createDataFrame(val, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
-    #test=spark.createDataFrame(test, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
-
     # check for each dataset to make sure the split works
     print(train.select('user_id').distinct().count())
-    #print(test_val.select('user_id').distinct().count())
-
     print(val.select('user_id').distinct().count())
     print(test.select('user_id').distinct().count())
 
-    #return train, val, test
-    return train, test_val
+    return train, val, test
 
 
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write files 
-# [] (2) Convert wf from pandas to pyspark for train/val split
+# [] (2) Check the splitting function for correctness
 # [] (3) Any items not observed during training (i.e., which have no interactions in the training set, or in the observed portion of the validation and test users), can be omitted unless you're implementing cold-start recommendation as an extension.
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
