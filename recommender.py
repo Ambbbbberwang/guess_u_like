@@ -91,29 +91,34 @@ def train_val_test_split(spark, records_pq, seed=42):
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') # bug introduced
-
+    test_val=records_pq.join(test_val, ['user_id'])
     #train.show()
-    test_val.show() # bug here !
+    test_val.show() 
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
-    user_samp=users.sample(False, fraction=0.5, seed=seed)
+    val=users.sample(False, fraction=0.5, seed=seed)
     user_samp.show()
-    test=user_samp.join(test_val, ['user_id']) 
-    val=user_samp.join(test_val, ['user_id'], 'left_anti')
+    test=test_val.join(user_samp, ['user_id']) 
+    val=test_val.join(user_samp, ['user_id'], 'left_anti')
+    val=test_val.join(val, ['user_id'])
+
+    val.show()
+    test.show()
 
     # split the validation set into 50/50 interactions
     val_train=val.sample(False, fraction=0.5, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(val_train)
+    val.show()
 
     # same for test set
     test_train=test.sample(False, fraction=0.5, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(test_train)
-    
+    test.show()
     #import pandas as pd
 
     #temp=test.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
