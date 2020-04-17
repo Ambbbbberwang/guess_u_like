@@ -40,42 +40,33 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
 
     if savepq == True:
 
-        # remove the users with only a low number of interactions
-        # https://stackoverflow.com/questions/51063624/whats-the-equivalent-of-pandas-value-counts-in-pyspark
-        # https://stackoverflow.com/questions/49301373/pyspark-filter-dataframe-based-on-multiple-conditions
+        # Recommender constraint: remove the users with only a low number of interactions
+
         import pyspark.sql.functions as f
         from pyspark.sql import Window
 
         w= Window.partitionBy('user_id')
-        # get the number of interactions for all users - we should probably remove this column later
+        # Add a column with the number of interactions for all users 
+        # note: we should rm this column using drop command
         spark_df=spark_df.select('user_id', 'book_id', 'is_read', 'rating', 'is_reviewed', f.count('user_id').over(w).alias('n_int')).sort('user_id')
         spark_df=spark_df.filter(spark_df.n_int>int(filter_num))
-        spark_df.show()
-        #print((users.count(), len(users.columns)))
-
-        # Downsampling should follow similar logic to partitioning: 
-        # don't downsample interactions directly. 
-        # Instead, sample a percentage of users, 
-        # and take all of their interactions to make a miniature version of the data.
-        
-        #false = without replacement
-        #df.sample(false ,fraction,seed)
+        #spark_df.show()
+ 
+        # downsampling: sample a percentage of users, and take all of their interactions to make a miniature version of the data.
         users=spark_df.select('user_id').distinct()
         user_samp=users.sample(False, fraction=fraction, seed=seed)
-        user_samp.show()
-        # attn: change this to spark workflow
-        #temp=temp.toPandas().iloc[:,0]
-        #temp=temp.iloc[:,0]
-        #temp=temp.tolist()
-        
-        #records=spark_df[spark_df['user_id'].isin(temp)]
-        #records=spark_df.where(f.col('user_id').isin(user_samp))
+        #user_samp.show()
+
+        # inner join: keep only the randomly sampled users and all their interactions (based on percentage specified)
         records=spark_df.join(user_samp, ['user_id'])
         
-        records.select('user_id').distinct().count()
-        spark_df.select('user_id').distinct().count()
+        # check that this matches the desired percentage
+        print(records.select('user_id').distinct().count())  
+        print(spark_df.select('user_id').distinct().count()) 
 
-        records.write.parquet(pq_path)
+        # write to parquet format
+        # note: this will fail if the path already exists - remove the file with "hadoop fs -rm -r onepct_int.parquet"
+        records.orderBy('user_id').write.parquet(pq_path)
 
     records_pq = spark.read.parquet(pq_path)
 
@@ -87,57 +78,72 @@ def train_val_test_split(spark, records_pq, seed=42):
     # number of distinct users for checking
     print(records_pq.select('user_id').distinct().count())
 
-    # Select 60% of users (and all of their interactions) to form the training setself.
-    # Select 20% of users to form the validation set. 
+    # Splitting procedure: 
+    # Select 60% of users (and all of their interactions).
+    # Select 20% of users to form the validation set (half interactions for training, half in validation). 
+    # Select 20% of users to form the test set (same as validation).
+
+    # find the unique users:
     users=records_pq.select('user_id').distinct()
-    temp=users.sample(False, fraction=0.6, seed=seed)
-    # attn: change this to spark workflow
-    temp=temp.toPandas().iloc[:,0]
-    temp=temp.tolist()
-    train=records_pq[records_pq['user_id'].isin(temp)].toPandas() # all interactions
-    test_val=records_pq[~records_pq['user_id'].isin(temp)]
-
-    # split test (20%), val (20%), putting half back into training set
-    users=test_val.select('user_id').distinct()
-    temp=users.sample(False, fraction=0.5, seed=seed)
-    # attn: change this to spark workflow
-    temp=temp.toPandas().iloc[:,0]
-    temp=temp.tolist()
-    test=test_val[test_val['user_id'].isin(temp)].toPandas()
-    val=test_val[~test_val['user_id'].isin(temp)].toPandas()
-
-    import pandas as pd
-
-    # split test into 2 dfs: test and training interactions for all users 
-    # note this excludes users with one interaction right now - should they be subset first?
-    temp=test.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
-    keys = list(temp.columns.values) 
-    i1 = test.set_index(keys).index
-    i2 = temp.set_index(keys).index
-    test_train = test[~i1.isin(i2)]
-    test = temp
-
-    temp=val.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
-    keys = list(temp.columns.values) 
-    i1 = val.set_index(keys).index
-    i2 = temp.set_index(keys).index
-    val_train = val[~i1.isin(i2)]
-    val = temp
-
-    # https://stackoverflow.com/questions/54797508/how-to-generate-a-train-test-split-based-on-a-group-id
-    train=pd.concat([train, val_train, test_train], axis=0)
     
+    # attn: change this to spark workflow
+    #temp=temp.toPandas().iloc[:,0]
+    #temp=temp.tolist()
+    #train=records_pq[records_pq['user_id'].isin(temp)].toPandas() # all interactions
+    #test_val=records_pq[~records_pq['user_id'].isin(temp)]
+
+    # sample the 60% and all interactions to form the training set and remaining set
+    user_samp=users.sample(False, fraction=0.6, seed=seed).select('user_id')
+    train=user_samp.join(records_pq, ['user_id'])
+    test_val=user_samp.join(records_pq, ['user_id'], 'left_anti')
+    print(train.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
+
+    # split the remainder into test (20%), val (20%) 
+    #users=test_val.select('user_id').distinct()
+    #temp=users.sample(False, fraction=0.5, seed=seed)
     
-    train=spark.createDataFrame(train, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
-    val=spark.createDataFrame(val, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
-    test=spark.createDataFrame(test, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
+    # attn: change this to spark workflow
+    #temp=temp.toPandas().iloc[:,0]
+    #temp=temp.tolist()
+    #test=test_val[test_val['user_id'].isin(temp)].toPandas()
+    #val=test_val[~test_val['user_id'].isin(temp)].toPandas()
+
+    #import pandas as pd
+
+    # split test into 2 dfs: test and training interactions for these users 
+    #temp=test.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
+    #keys = list(temp.columns.values) 
+    #i1 = test.set_index(keys).index
+    #i2 = temp.set_index(keys).index
+    #test_train = test[~i1.isin(i2)]
+    #test = temp
+
+    #temp=val.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
+    #keys = list(temp.columns.values) 
+    #i1 = val.set_index(keys).index
+    #i2 = temp.set_index(keys).index
+    #val_train = val[~i1.isin(i2)]
+    #val = temp
+
+    # add back to the training set
+    #train=pd.concat([train, val_train, test_train], axis=0)
+
+    # remove items that are not observed in training from all three datasets
+    
+    #train=spark.createDataFrame(train, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
+    #val=spark.createDataFrame(val, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
+    #test=spark.createDataFrame(test, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
 
     # check for each dataset to make sure the split works
-    print(train.select('user_id').distinct().count())
-    print(val.select('user_id').distinct().count())
-    print(test.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(test_val.select('user_id').distinct().count())
 
-    return train, val, test
+    #print(val.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
+
+    #return train, val, test
+    return train, test_val
 
 
 ### NEXT STEPS ###
