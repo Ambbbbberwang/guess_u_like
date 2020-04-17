@@ -57,8 +57,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         #df.sample(false ,fraction,seed)
         users=spark_df.select('user_id').distinct()
         user_samp=users.sample(False, fraction=fraction, seed=seed)
-        print(user_samp)
-        print(type(user_samp))
+        user_samp.show()
         # attn: change this to spark workflow
         #temp=temp.toPandas().iloc[:,0]
         #temp=temp.iloc[:,0]
