@@ -72,8 +72,8 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         #records=spark_df.where(f.col('user_id').isin(user_samp))
         records=spark_df.join(user_samp, ['user_id'])
         
-        records.select('user_id').distinct().count().show()
-        spark_df.select('user_id').distinct().count().show()
+        records.select('user_id').distinct().count()
+        spark_df.select('user_id').distinct().count()
 
         records.write.parquet(pq_path)
 
