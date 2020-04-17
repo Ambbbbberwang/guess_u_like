@@ -61,8 +61,8 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         records=spark_df.join(user_samp, ['user_id'])
         
         # check that this matches the desired percentage
-        print(records.select('user_id').distinct().count())  
-        print(spark_df.select('user_id').distinct().count()) 
+        #print(records.select('user_id').distinct().count()) #--> 7711 
+        #print(spark_df.select('user_id').distinct().count()) #--> 766717 
 
         # write to parquet format
         # note: this will fail if the path already exists - remove the file with "hadoop fs -rm -r onepct_int.parquet"
@@ -85,33 +85,33 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
-    
-    # attn: change this to spark workflow
-    #temp=temp.toPandas().iloc[:,0]
-    #temp=temp.tolist()
-    #train=records_pq[records_pq['user_id'].isin(temp)].toPandas() # all interactions
-    #test_val=records_pq[~records_pq['user_id'].isin(temp)]
 
-    # sample the 60% and all interactions to form the training set and remaining set
+    # sample the 60% and all interactions to form the training set and remaining set (test and val)
+    users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed).select('user_id')
     train=user_samp.join(records_pq, ['user_id'])
     test_val=user_samp.join(records_pq, ['user_id'], 'left_anti')
-    print(train.select('user_id').distinct().count())
-    print(test_val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(test_val.select('user_id').distinct().count())
 
-    # split the remainder into test (20%), val (20%) 
-    #users=test_val.select('user_id').distinct()
-    #temp=users.sample(False, fraction=0.5, seed=seed)
+    # split the remainder into test (20%), val (20%) - 50% split
+    users=test_val.select('user_id').distinct()
+    user_samp=users.sample(False, fraction=0.5, seed=seed).select('user_id')
+    test=user_samp.join(test_val, ['user_id']) 
+    val=user_samp.join(test_val, ['user_id'], 'left_anti')
+
+    # split the validation set into 50/50 interactions
+    val_train=val.sample(False, fraction=0.5, seed=seed)
+    val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
+    train=train.union(val_train)
+
+    # same for test set
+    test_train=test.sample(False, fraction=0.5, seed=seed)
+    test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
+    train=train.union(test_train)
     
-    # attn: change this to spark workflow
-    #temp=temp.toPandas().iloc[:,0]
-    #temp=temp.tolist()
-    #test=test_val[test_val['user_id'].isin(temp)].toPandas()
-    #val=test_val[~test_val['user_id'].isin(temp)].toPandas()
-
     #import pandas as pd
 
-    # split test into 2 dfs: test and training interactions for these users 
     #temp=test.groupby('user_id').apply(lambda x: x.sample(frac=0.5)).reset_index(drop=True)
     #keys = list(temp.columns.values) 
     #i1 = test.set_index(keys).index
@@ -136,11 +136,11 @@ def train_val_test_split(spark, records_pq, seed=42):
     #test=spark.createDataFrame(test, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
 
     # check for each dataset to make sure the split works
-    #print(train.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
-    #print(val.select('user_id').distinct().count())
-    #print(test.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
 
     #return train, val, test
     return train, test_val
