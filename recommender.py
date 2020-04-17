@@ -53,7 +53,11 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         spark_df.show()
         #print((users.count(), len(users.columns)))
 
-        # Downsampling should follow similar logic to partitioning: don't downsample interactions directly. Instead, sample a percentage of users, and take all of their interactions to make a miniature version of the data.
+        # Downsampling should follow similar logic to partitioning: 
+        # don't downsample interactions directly. 
+        # Instead, sample a percentage of users, 
+        # and take all of their interactions to make a miniature version of the data.
+        
         #false = without replacement
         #df.sample(false ,fraction,seed)
         users=spark_df.select('user_id').distinct()
@@ -66,7 +70,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         
         #records=spark_df[spark_df['user_id'].isin(temp)]
         #records=spark_df.where(f.col('user_id').isin(user_samp))
-        records=spark_df.join(user_samp, spark_df.user_id == user_samp.user_id)
+        records=spark_df.join(user_samp, ['user_id'])
         
         records.select('user_id').distinct().count().show()
         spark_df.select('user_id').distinct().count().show()
@@ -139,10 +143,11 @@ def train_val_test_split(spark, records_pq, seed=42):
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write files 
-# [] (2) Convert wf from pandas to pyspark
+# [] (2) Convert wf from pandas to pyspark for train/val split
 # [] (3) Any items not observed during training (i.e., which have no interactions in the training set, or in the observed portion of the validation and test users), can be omitted unless you're implementing cold-start recommendation as an extension.
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
-        # DOCUMENT HERE - started by removing 10 interactions
+        # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
+                        # note: this is a parameter we can tune later if we want
 
 # [] (5) Implement basic recsys: pyspark.ml.recommendation module
 
@@ -158,5 +163,6 @@ def train_val_test_split(spark, records_pq, seed=42):
 #import recommender
 #interactions=recommender.data_read(spark, 'interactions')
 #records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
-#records=recommender.data_prep(spark, interactions, 0.01, 42, False, 1)
+    ##records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
+#train, val, test = recommender.train_val_test_split(spark,records)
 
