@@ -90,10 +90,10 @@ def train_val_test_split(spark, records_pq, seed=42):
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
-    test_val=user_samp.join(records_pq, ['user_id'], 'left_anti')
+    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') # bug introduced
 
-    train.show()
-    test_val.show()
+    #train.show()
+    test_val.show() # bug here !
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
