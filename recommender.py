@@ -57,7 +57,8 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         #df.sample(false ,fraction,seed)
         users=spark_df.select('user_id').distinct()
         user_samp=users.sample(False, fraction=fraction, seed=seed)
-
+        print(user_samp)
+        print(type(user_samp))
         # attn: change this to spark workflow
         #temp=temp.toPandas().iloc[:,0]
         #temp=temp.iloc[:,0]
@@ -137,7 +138,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 # [x] (1) Convert to parquet and write files 
 # [] (2) Convert wf from pandas to pyspark
 # [] (3) Any items not observed during training (i.e., which have no interactions in the training set, or in the observed portion of the validation and test users), can be omitted unless you're implementing cold-start recommendation as an extension.
-# [] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
+# [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing 10 interactions
 
 # [] (5) Implement basic recsys: pyspark.ml.recommendation module
@@ -153,6 +154,6 @@ def train_val_test_split(spark, records_pq, seed=42):
 
 #import recommender
 #interactions=recommender.data_read(spark, 'interactions')
-#records_pq=recommender.data_prep(spark, interactions, 0.01, 42, True, 1)
+#records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
 #records=recommender.data_prep(spark, interactions, 0.01, 42, False, 1)
 
