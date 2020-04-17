@@ -90,8 +90,11 @@ def train_val_test_split(spark, records_pq, seed=42):
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
-    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') # bug introduced
-    test_val=records_pq.join(test_val, ['user_id'])
+    train.select('user_id').distinct().count()
+    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
+    test_val.show()
+    test_val.select('user_id').distinct().count()
+    test_val=test_val.join(records_pq, ['user_id'])
     #train.show()
     test_val.show() 
     #print(train.select('user_id').distinct().count())
