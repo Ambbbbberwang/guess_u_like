@@ -50,6 +50,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         # get the number of interactions for all users - we should probably remove this column later
         spark_df=spark_df.select('user_id', 'book_id', 'is_read', 'rating', 'is_reviewed', f.count('user_id').over(w).alias('n_int')).sort('user_id')
         spark_df=spark_df.filter(spark_df.n_int>int(filter_num))
+        spark_df.show()
         #print((users.count(), len(users.columns)))
 
         # Downsampling should follow similar logic to partitioning: don't downsample interactions directly. Instead, sample a percentage of users, and take all of their interactions to make a miniature version of the data.
@@ -65,7 +66,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         
         #records=spark_df[spark_df['user_id'].isin(temp)]
         #records=spark_df.where(f.col('user_id').isin(user_samp))
-        records = spark_df.join(user_samp, spark_df('user_id') == user_samp('user_id'))
+        records = spark_df.join(user_samp, spark_df('user_id') === user_samp('user_id'))
         print('Selected %f percent of users', records.select('user_id').distinct().count()/spark_df.select('user_id').distinct().count())
 
         records.write.parquet(pq_path)
