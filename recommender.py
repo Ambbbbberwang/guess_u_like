@@ -66,7 +66,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         
         #records=spark_df[spark_df['user_id'].isin(temp)]
         #records=spark_df.where(f.col('user_id').isin(user_samp))
-        records = spark_df.join(user_samp, spark_df('user_id') === user_samp('user_id'))
+        records = spark_df.join(user_samp, Seq("user_id"))
         print('Selected %f percent of users', records.select('user_id').distinct().count()/spark_df.select('user_id').distinct().count())
 
         records.write.parquet(pq_path)
