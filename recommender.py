@@ -88,7 +88,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
-    user_samp=users.sample(False, fraction=0.6, seed=seed).select('user_id')
+    user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     test_val=user_samp.join(records_pq, ['user_id'], 'left_anti')
     #print(train.select('user_id').distinct().count())
@@ -96,7 +96,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
-    user_samp=users.sample(False, fraction=0.5, seed=seed).select('user_id')
+    user_samp=users.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=user_samp.join(test_val, ['user_id'], 'left_anti')
 
@@ -129,7 +129,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     # add back to the training set
     #train=pd.concat([train, val_train, test_train], axis=0)
 
-    # remove items that are not observed in training from all three datasets
+    # TO DO: remove items that are not observed in training from all three datasets
     
     #train=spark.createDataFrame(train, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
     #val=spark.createDataFrame(val, schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
