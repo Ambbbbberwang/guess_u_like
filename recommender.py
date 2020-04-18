@@ -85,45 +85,50 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
-    print(users.count())
+    #print(users.count())
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
-    #train.show()
-    print(train.select('user_id').distinct().count())
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    #test_val.show()
-    print(test_val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
-    print(test.select('user_id').distinct().count())
-    print(val.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
+    #print(val.select('user_id').distinct().count())
 
     # split the validation set into 50/50 interactions
     val_train=val.sample(False, fraction=0.5, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(val_train)
-    print(val.select('user_id').distinct().count())
-    print(train.select('user_id').distinct().count())
+    #print(val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
 
     # same for test set
     test_train=test.sample(False, fraction=0.5, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     train=train.union(test_train)
-    print(test.select('user_id').distinct().count())
-    print(train.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
 
-    # TO DO: remove items that are not in training from all three datasets
-    items=train.select('book_id').distinct()
-    train=train.join(items, ['book_id'], 'left_anti')
-    val=val.join(items, ['book_id'], 'left_anti')
-    test=test.join(items, ['book_id'], 'left_anti')
+    # remove items that are not in training from all three datasets
+    #find items in val and/or test that are not in train
+    itemsv=val.select('book_id').distinct()
+    itemst=test.select('book_id').distinct()
+    items_testval=itemsv.union(itemst).distinct()
+
+    items_train=train.select('book_id').distinct()
+    items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
+
+    train=train.join(items_rm, ['book_id'], 'left_anti')
+    val=val.join(items_rm, ['book_id'], 'left_anti')
+    test=test.join(items_rm, ['book_id'], 'left_anti')
     
     # check for each dataset to make sure the split works
     print(train.select('user_id').distinct().count())
@@ -136,20 +141,20 @@ def train_val_test_split(spark, records_pq, seed=42):
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write files 
-# [] (2) Check the splitting function for correctness
-# [] (3) Any items not observed during training (i.e., which have no interactions in the training set, or in the observed portion of the validation and test users), can be omitted unless you're implementing cold-start recommendation as an extension.
+# [o] (2) Check the splitting function for correctness
+# [o] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
-                        # note: this is a parameter we can tune later if we want
+                        # note: this is a parameter we can tune 
 
-# [] (5) Implement basic recsys: pyspark.ml.recommendation module
+# [o] (5) Implement basic recsys: pyspark.ml.recommendation module
 
-# [] (6) Tune HP: rank, lambda
+# [o] (6) Tune HP: rank, lambda
 
-# [] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
+# [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
         # metrics: should we use AUC, avg. precicion, reciprocal rank?
 
-# [] (8) Main 
+# [o] (8) Main 
 
 #def main():
 
