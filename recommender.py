@@ -95,7 +95,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
-    # split the remainder into test (20%), val (20%) - 50% split
+    # split the remainder into test (20%), val (20%) 
     users=test_val.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
@@ -131,16 +131,16 @@ def train_val_test_split(spark, records_pq, seed=42):
     test=test.join(items_rm, ['book_id'], 'left_anti')
     
     # check for each dataset to make sure the split works
-    print(train.select('user_id').distinct().count())
-    print(val.select('user_id').distinct().count())
-    print(test.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(val.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
 
     return train, val, test
 
 
 ### NEXT STEPS ###
 
-# [x] (1) Convert to parquet and write files 
+# [x] (1) Convert to parquet and write file function 
 # [o] (2) Check the splitting function for correctness
 # [o] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
@@ -152,9 +152,13 @@ def train_val_test_split(spark, records_pq, seed=42):
 # [o] (6) Tune HP: rank, lambda
 
 # [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
-        # metrics: should we use AUC, avg. precicion, reciprocal rank?
+        # metrics: AUC, avg. precicion, reciprocal rank?
 
 # [o] (8) Main 
+
+# [o] (9) Extension 1
+
+# [o] (10) Extension 2
 
 #def main():
 
