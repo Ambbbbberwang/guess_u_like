@@ -85,16 +85,17 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
+    print(users.count())
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     #train.show()
-    #print(train.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
     #test_val.show()
-    #print(test_val.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) - 50% split
     users=test_val.select('user_id').distinct()
@@ -120,7 +121,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # TO DO: remove items that are not in training from all three datasets
     items=train.select('book_id').distinct()
-    train=train.join(items)
+    train=train.join(items, ['book_id'], 'left_anti')
     val=val.join(items, ['book_id'], 'left_anti')
     test=test.join(items, ['book_id'], 'left_anti')
     
