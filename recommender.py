@@ -105,24 +105,24 @@ def train_val_test_split(spark, records_pq, seed=42):
     #print(val.select('user_id').distinct().count())
 
     # split the validation set into 50/50 by users interactions
-    print(val.groupBy('user_id').count().show())
+    print(val.groupBy('user_id').count().orderBy('user_id').show())
     users=val.select('user_id').distinct().collect()
-    frac = dict((e.user_id, 0.5) for e in users)
+    frac = dict((u.user_id, 0.5) for u in users)
     #print(frac)
     val_train=val.sampleBy('user_id', fractions=frac, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
-    print(val.groupBy('user_id').count().show())
+    print(val.groupBy('user_id').count().orderBy('user_id').show())
     train=train.union(val_train)
     print(train.select('user_id').distinct().count())
 
     # same for test set
-    print(test.groupBy('user_id').count().show())
+    print(test.groupBy('user_id').count().orderBy('user_id').show())
     users=test.select('user_id').distinct().collect()
-    frac = dict((e.user_id, 0.5) for e in users)
+    frac = dict((u.user_id, 0.5) for u in users)
     #print(frac)
     test_train=test.sampleBy('user_id', fractions=frac, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
-    print(test.groupBy('user_id').count().show())
+    print(test.groupBy('user_id').count().orderBy('user_id').show())
     train=train.union(test_train)
     print(train.select('user_id').distinct().count())
 
