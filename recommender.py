@@ -85,32 +85,36 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
-    #print(users.count())
+    print(users.count())
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    #print(train.select('user_id').distinct().count())
-    #print(test_val.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
 
-    # split the validation set into 50/50 by users interactions
+    # split the remaining set into 50/50 by users' interactions
     print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    users2=test_val.select('user_id').distinct().collect()
+    users2=test_val.select('user_id').distinct()
     frac = dict((u.user_id, 0.5) for u in users2)
-    #print(frac)
+    print(frac)
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
     test_val=test_val.join(test_val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     print(test_val.groupBy('user_id').count().orderBy('user_id').show())
+    # add training 50% back to train
     train=train.union(test_val_train)
     print(train.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
 
    # split the test_val set into test (20%), val (20%) by user
     users3=test_val.select('user_id').distinct()
     user_samp=users3.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
+    print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
 
     # remove items that are not in training from all three datasets
     #find items in val and/or test that are not in train
@@ -133,12 +137,60 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     return train, val, test
 
+def recsys_fit():
+
+    # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
+
+    df = spark.createDataFrame(
+    [(0, 0, 4.0), (0, 1, 2.0), (1, 1, 3.0), (1, 2, 4.0), (2, 1, 1.0), (2, 2, 5.0)],
+    ["user", "item", "rating"])
+
+    als = ALS(rank=10, maxIter=5, seed=0)
+    model = als.fit(df)
+    model.rank
+    model.userFactors.orderBy("id").collect()
+
+    test = spark.createDataFrame([(0, 2), (1, 0), (2, 0)], ["user", "item"])
+
+    predictions = sorted(model.transform(test).collect(), key=lambda r: r[0])
+    predictions[0]
+    predictions[1]
+    predictions[2]
+
+    user_recs = model.recommendForAllUsers(3)
+    user_recs.where(user_recs.user == 0).select("recommendations.item", "recommendations.rating").collect()
+
+    item_recs = model.recommendForAllItems(3)
+    item_recs.where(item_recs.item == 2).select("recommendations.user", "recommendations.rating").collect()
+
+    user_subset = df.where(df.user == 2)
+    user_subset_recs = model.recommendForUserSubset(user_subset, 3)
+    user_subset_recs.select("recommendations.item", "recommendations.rating").first()
+
+    item_subset = df.where(df.item == 0)
+    item_subset_recs = model.recommendForItemSubset(item_subset, 3)
+    item_subset_recs.select("recommendations.user", "recommendations.rating").first()
+
+    als_path = temp_path + "/als"
+    als.save(als_path)
+    als2 = ALS.load(als_path)
+    als.getMaxIter()
+
+    model_path = temp_path + "/als_model"
+    model.save(model_path)
+    model2 = ALSModel.load(model_path)
+    model.rank == model2.rank
+
+    sorted(model.userFactors.collect()) == sorted(model2.userFactors.collect())
+    sorted(model.itemFactors.collect()) == sorted(model2.itemFactors.collect())
+
+    return XXX
 
 
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write file function 
-# [x] (2) Check the splitting function for correctness
+# [o] (2) Check the splitting function for correctness
 # [o] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
