@@ -112,7 +112,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     print(train.select('user_id').distinct().count())
 
     # same for test set
-    print(test.groupy('user_id').count().show())
+    print(test.groupBy('user_id').count().show())
     test_train=test.sampleBy('user_id', fraction=0.5, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     print(test.groupy('user_id').count().show())
