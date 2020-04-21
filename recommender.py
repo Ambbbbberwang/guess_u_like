@@ -97,7 +97,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # split the remaining set into 50/50 by users' interactions
     print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    users2=test_val.select('user_id').distinct()
+    users2=test_val.select('user_id').distinct().collect()
     frac = dict((u.user_id, 0.5) for u in users2)
     print(frac)
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
@@ -109,7 +109,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     print(test_val.select('user_id').distinct().count())
 
    # split the test_val set into test (20%), val (20%) by user
-    users3=test_val.select('user_id').distinct()
+    users3=test_val.select('user_id').distinct().collect()
     user_samp=users3.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
