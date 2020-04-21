@@ -104,12 +104,12 @@ def train_val_test_split(spark, records_pq, seed=42):
     test_val=test_val.join(test_val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     # add training 50% back to train
-    train=train.union(test_val_train)
+    train=train.union(test_val_train) # attn: there is an error here
     print(train.select('user_id').distinct().count())
     print(test_val.select('user_id').distinct().count())
 
    # split the test_val set into test (20%), val (20%) by user
-    users3=test_val.select('user_id').distinct().collect()
+    users3=test_val.select('user_id').distinct()
     user_samp=users3.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
