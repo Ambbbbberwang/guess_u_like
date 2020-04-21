@@ -104,7 +104,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     print(val.select('user_id').distinct().count())
 
     # split the validation set into 50/50 by users interactions
-    print(val.groupy('user_id').count().show())
+    print(val.groupBy('user_id').count().show())
     val_train=val.sampleBy('user_id', fraction=0.5, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
     print(val.groupy('user_id').count().show())
@@ -146,7 +146,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write file function 
-# [o] (2) Check the splitting function for correctness
+# [x] (2) Check the splitting function for correctness
 # [o] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
