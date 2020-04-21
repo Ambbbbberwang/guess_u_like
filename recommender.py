@@ -29,10 +29,10 @@ def data_read(spark, path):
 def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, filter_num=10):
     '''
     spark: spark
-    spark_df: spark object
-    fraction: decimal percentage of users to retrieve (i.e. 0.01, 0.05, 0.25)
+    spark_df: spark df, output from date_read
+    fraction: decimal (%) of users to retrieve (i.e. 0.01, 0.05, 0.25)
     seed: set random seed for reproducibility
-    savepq: if we need to process the csv, prep the data and save parquet
+    savepq: whether we need to process csv file; if True, prep the data and save parquet
     pq_path: save and/or read from path (i.e. 'hdfs:/user/eac721/onepct_int.parquet')
 
     returns records object with random, specified subset of users
@@ -65,18 +65,18 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         #print(spark_df.select('user_id').distinct().count())  
 
         # write to parquet format
-        # note: this will fail if the path already exists - remove the file with "hadoop fs -rm -r onepct_int.parquet"
+        # note: this will fail if the path already exists 
+        # remove the file with "hadoop fs -rm -r onepct_int.parquet"
         records.orderBy('user_id').write.parquet(pq_path)
 
     records_pq = spark.read.parquet(pq_path)
 
     return records_pq
 
-# train/val, test split (60/20/20 by user_id)
 def train_val_test_split(spark, records_pq, seed=42):
 
     # number of distinct users for checking
-    #print(records_pq.select('user_id').distinct().count())
+    print(records_pq.select('user_id').distinct().count())
 
     # Splitting procedure: 
     # Select 60% of users (and all of their interactions).
@@ -85,37 +85,39 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
-    #print(users.count())
+    print(users.count())
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    #print(train.select('user_id').distinct().count())
-    #print(test_val.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
 
     # split the remainder into test (20%), val (20%) 
     users=test_val.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
-    #print(test.select('user_id').distinct().count())
-    #print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
 
-    # split the validation set into 50/50 interactions
-    val_train=val.sample(False, fraction=0.5, seed=seed)
+    # split the validation set into 50/50 by users interactions
+    print(val.groupy('user_id').count().show())
+    val_train=val.sampleBy('user_id', fraction=0.5, seed=seed)
     val=val.join(val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
+    print(val.groupy('user_id').count().show())
     train=train.union(val_train)
-    #print(val.select('user_id').distinct().count())
-    #print(train.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
 
     # same for test set
-    test_train=test.sample(False, fraction=0.5, seed=seed)
+    print(test.groupy('user_id').count().show())
+    test_train=test.sampleBy('user_id', fraction=0.5, seed=seed)
     test=test.join(test_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
+    print(test.groupy('user_id').count().show())
     train=train.union(test_train)
-    #print(test.select('user_id').distinct().count())
-    #print(train.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
 
     # remove items that are not in training from all three datasets
     #find items in val and/or test that are not in train
@@ -125,17 +127,20 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     items_train=train.select('book_id').distinct()
     items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
+    print(items_rm.show())
 
     train=train.join(items_rm, ['book_id'], 'left_anti')
     val=val.join(items_rm, ['book_id'], 'left_anti')
     test=test.join(items_rm, ['book_id'], 'left_anti')
+    #print(train.filter('book_id' ))
     
     # check for each dataset to make sure the split works
-    #print(train.select('user_id').distinct().count())
-    #print(val.select('user_id').distinct().count())
-    #print(test.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
 
     return train, val, test
+
 
 
 ### NEXT STEPS ###
