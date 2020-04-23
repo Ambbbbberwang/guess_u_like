@@ -50,6 +50,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         # note: we should rm this column using drop command
         spark_df=spark_df.select('user_id', 'book_id', 'is_read', 'rating', 'is_reviewed', f.count('user_id').over(w).alias('n_int')).sort('user_id')
         spark_df=spark_df.filter(spark_df.n_int>int(filter_num))
+        spark_df=spark_df.drop('n_int').collect() # needs to be tested
         #spark_df.show()
  
         # downsampling: sample a percentage of users, and take all of their interactions to make a miniature version of the data.
@@ -144,54 +145,41 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     return train, val, test
 
-def recsys_fit():
+def recsys_fit(train, val):
 
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
+    # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
 
-    df = spark.createDataFrame(
-    [(0, 0, 4.0), (0, 1, 2.0), (1, 1, 3.0), (1, 2, 4.0), (2, 1, 1.0), (2, 2, 5.0)],
-    ["user", "item", "rating"])
+    from pyspark.ml.recommendation import ALS, ALSModel
 
-    als = ALS(rank=10, maxIter=5, seed=0)
-    model = als.fit(df)
-    model.rank
-    model.userFactors.orderBy("id").collect()
+    # Build the recommendation model using ALS on the training data
+    als = ALS(maxIter=2, regParam=0.01, 
+          userCol="user_id", itemCol="book_id", ratingCol="rating",
+          coldStartStrategy="drop",
+          implicitPrefs=False)
+    model = als.fit(train)
 
-    test = spark.createDataFrame([(0, 2), (1, 0), (2, 0)], ["user", "item"])
+    print(model.rank)
+    print(model.userFactors.orderBy("user_id").collect())
 
-    predictions = sorted(model.transform(test).collect(), key=lambda r: r[0])
-    predictions[0]
-    predictions[1]
-    predictions[2]
+    # Evaluate the model by computing the RMSE on the test data
+    #predictions = model.transform(test)
+
+    predictions = sorted(model.transform(val).collect(), key=lambda r: r[0])
+    print(predictions[0])
+    print(predictions[1])
+
+    evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
+    rmse = evaluator.evaluate(predictions)
+    print("Root-mean-square error = " + str(rmse))
 
     user_recs = model.recommendForAllUsers(3)
-    user_recs.where(user_recs.user == 0).select("recommendations.item", "recommendations.rating").collect()
+    print(user_recs.select("recommendations.item", "recommendations.rating").collect())
 
     item_recs = model.recommendForAllItems(3)
-    item_recs.where(item_recs.item == 2).select("recommendations.user", "recommendations.rating").collect()
+    print(item_recs.select("recommendations.user", "recommendations.rating").collect())
 
-    user_subset = df.where(df.user == 2)
-    user_subset_recs = model.recommendForUserSubset(user_subset, 3)
-    user_subset_recs.select("recommendations.item", "recommendations.rating").first()
-
-    item_subset = df.where(df.item == 0)
-    item_subset_recs = model.recommendForItemSubset(item_subset, 3)
-    item_subset_recs.select("recommendations.user", "recommendations.rating").first()
-
-    als_path = temp_path + "/als"
-    als.save(als_path)
-    als2 = ALS.load(als_path)
-    als.getMaxIter()
-
-    model_path = temp_path + "/als_model"
-    model.save(model_path)
-    model2 = ALSModel.load(model_path)
-    model.rank == model2.rank
-
-    sorted(model.userFactors.collect()) == sorted(model2.userFactors.collect())
-    sorted(model.itemFactors.collect()) == sorted(model2.itemFactors.collect())
-
-    return XXX
+    return model
 
 
 ### NEXT STEPS ###
