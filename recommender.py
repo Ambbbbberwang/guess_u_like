@@ -85,62 +85,62 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
-    print(users.count())
+    #print(users.count())
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
     user_samp=users.sample(False, fraction=0.6, seed=seed)
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    print(train.select('user_id').distinct().count())
-    print(test_val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(test_val.select('user_id').distinct().count())
 
     # split the remaining set into 50/50 by users' interactions
-    print(test_val.groupBy('user_id').count().orderBy('user_id').show())
+    #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     users2=test_val.select('user_id').distinct().collect()
     frac = dict((u.user_id, 0.5) for u in users2)
-    print(frac)
+    #print(frac)
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
-    print(test_val.groupBy('user_id').count().orderBy('user_id').show())
+    #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     # add training 50% back to train
     train=train.union(test_val_train) 
-    print(train.select('user_id').distinct().count())
-    print(test_val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(test_val.select('user_id').distinct().count())
 
    # split the test_val set into test (20%), val (20%) by user
     users3=test_val.select('user_id').distinct()
     user_samp=users3.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
-    print(val.select('user_id').distinct().count())
-    print(test.select('user_id').distinct().count())
+    #print(val.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
 
     # remove items that are not in training from all three datasets
-    #find items in val and/or test that are not in train
+    # find items in val and/or test that are not in train
     itemsv=val.select('book_id').distinct()
     itemst=test.select('book_id').distinct()
     items_testval=itemsv.union(itemst).distinct()
 
     items_train=train.select('book_id').distinct()
-    print(items_train.orderBy('book_id').show())
+    #print(items_train.orderBy('book_id').show())
     items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
-    print(items_rm.orderBy('book_id').show())
+    #print(items_rm.orderBy('book_id').show())
 
-    print(train.groupBy('book_id').count().orderBy('book_id').show())
-    print(val.groupBy('book_id').count().orderBy('book_id').show())
-    print(test.groupBy('book_id').count().orderBy('book_id').show())
+    #print(train.groupBy('book_id').count().orderBy('book_id').show())
+    #print(val.groupBy('book_id').count().orderBy('book_id').show())
+    #print(test.groupBy('book_id').count().orderBy('book_id').show())
     train=train.join(items_rm, ['book_id'], 'left_anti')
     val=val.join(items_rm, ['book_id'], 'left_anti')
     test=test.join(items_rm, ['book_id'], 'left_anti')
-    print(train.groupBy('book_id').count().orderBy('book_id').show())
-    print(val.groupBy('book_id').count().orderBy('book_id').show())
-    print(test.groupBy('book_id').count().orderBy('book_id').show())
+    #print(train.groupBy('book_id').count().orderBy('book_id').show())
+    #print(val.groupBy('book_id').count().orderBy('book_id').show())
+    #print(test.groupBy('book_id').count().orderBy('book_id').show())
     
     # check for each dataset to make sure the split works
-    print(train.select('user_id').distinct().count())
-    print(val.select('user_id').distinct().count())
-    print(test.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())
+    #print(val.select('user_id').distinct().count())
+    #print(test.select('user_id').distinct().count())
 
     return train, val, test
 
@@ -197,8 +197,8 @@ def recsys_fit():
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write file function 
-# [o] (2) Check the splitting function for correctness
-# [o] (3) Check removal of items for correctness
+# [x] (2) Check the splitting function for correctness
+# [x] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
                         # note: this is a parameter we can tune 
@@ -208,7 +208,7 @@ def recsys_fit():
 # [o] (6) Tune HP: rank, lambda
 
 # [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
-        # metrics: AUC, avg. precicion, reciprocal rank?
+        # metrics: AUC [x], avg. precision [o], reciprocal rank [o]?
 
 # [o] (8) Main 
 
