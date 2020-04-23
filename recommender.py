@@ -76,13 +76,21 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
 
 def train_val_test_split(spark, records_pq, seed=42):
 
-    # number of distinct users for checking
-    #print(records_pq.select('user_id').distinct().count())
-
-    # Splitting procedure: 
+    '''
+    # This function takes the following splitting procedure: 
     # Select 60% of users (and all of their interactions).
     # Select 20% of users to form the validation set (half interactions for training, half in validation). 
     # Select 20% of users to form the test set (same as validation).
+
+    spark: spark object
+    records_pq: spark df output from data_prep function
+    seed: random seed
+
+    returns train, val, test data
+    '''
+
+    # number of distinct users for checking
+    #print(records_pq.select('user_id').distinct().count())
 
     # find the unique users:
     users=records_pq.select('user_id').distinct()
@@ -147,36 +155,66 @@ def train_val_test_split(spark, records_pq, seed=42):
 
 def recsys_fit(train, val):
 
+    '''
+    This function fits the recommender system.
+    
+    train: Input training data to fit the model
+    val: Input validation data to tune the model
+
+    References:
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
     # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
 
+    returns the ALS model object
+    '''
+
     from pyspark.ml.recommendation import ALS, ALSModel
     from pyspark.ml.evaluation import RegressionEvaluator
+    from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+
+
+    # subset the data
+    train = train.select(col("user_id"),col("book_id"),col("rating"))
+    val = val.select(col("user_id"),col("book_id"),col("rating"))
+    test = test.select(col("user_id"),col("book_id"),col("rating"))
 
     # Build the recommendation model using ALS on the training data
-    als = ALS(maxIter=2, regParam=0.01, 
+    als = ALS(maxIter=10, regParam=0.01, 
           userCol="user_id", itemCol="book_id", ratingCol="rating",
           coldStartStrategy="drop",
           implicitPrefs=False)
     model = als.fit(train)
 
-    print(model.rank)
-    #print(model.userFactors.orderBy("user_id").collect())
-
-    # Evaluate the model by computing the RMSE on the test data
-    #predictions = model.transform(test)
-
-    predictions = sorted(model.transform(val).collect(), key=lambda r: r[0])
-    print(predictions[0])
-    print(predictions[1])
+    #baseline evaluation on validation data:
     predictions = model.transform(val)
 
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
-    print("Root-mean-square error = " + str(rmse))
+    # evaluate the baseline model on the val set
+    print "The baseline model was trained with rank = %d and lambda = %.1f, " % (model.getRank(), model.getRegParam()) \
+      + "and its RMSE on the validation set is %f." % (rmse)
 
-    return model
+    # hyperparameter tuning: rank, lambda
+    paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).build()
+
+    crossval = CrossValidator(estimator=model,
+                      estimatorParamMaps=paramGrid,
+                      evaluator=RegressionEvaluator(),
+                      numFolds=5)  # use 3+ folds in practice
+
+    cvmodel = crossval.fit(val)
+
+    best_model = model.bestModel
+
+    predictions = best_model.transform(test)
+    rmse = evaluator.evaluate(predictions)
+
+    # evaluate the best model on the test set
+    print "The best model was trained with rank = %d and lambda = %.1f, " % (best_model.getRank(), best_model.getRegParam()) \
+      + "and its RMSE on the test set is %f." % (rmse)
+
+    return best_model
 
 
 ### NEXT STEPS ###
@@ -188,7 +226,7 @@ def recsys_fit(train, val):
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
                         # note: this is a parameter we can tune 
 
-# [o] (5) Implement basic recsys: pyspark.ml.recommendation module
+# [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
 # [o] (6) Tune HP: rank, lambda
 
