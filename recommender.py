@@ -149,6 +149,7 @@ def recsys_fit(train, val):
 
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
+    # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
 
     from pyspark.ml.recommendation import ALS, ALSModel
     from pyspark.ml.evaluation import RegressionEvaluator
@@ -174,12 +175,6 @@ def recsys_fit(train, val):
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
     print("Root-mean-square error = " + str(rmse))
-
-    user_recs = model.recommendForAllUsers(3)
-    print(user_recs.select("recommendations.item", "recommendations.rating").collect())
-
-    item_recs = model.recommendForAllItems(3)
-    print(item_recs.select("recommendations.user", "recommendations.rating").collect())
 
     return model
 
