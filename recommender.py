@@ -132,6 +132,8 @@ def train_val_test_split(spark, records_pq, seed=42):
     print(train.select('book_id').orderBy('book_id').show()) # improved check
     val=val.join(items_rm, ['book_id'], 'left_anti')
     test=test.join(items_rm, ['book_id'], 'left_anti')
+    print(train.select('book_id').orderBy('book_id').show()) # improved check
+    print(train.select('book_id').orderBy('book_id').show()) # improved check
     
     # check for each dataset to make sure the split works
     print(train.select('user_id').distinct().count())
