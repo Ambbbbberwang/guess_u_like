@@ -169,6 +169,7 @@ def recsys_fit(train, val):
     predictions = sorted(model.transform(val).collect(), key=lambda r: r[0])
     print(predictions[0])
     print(predictions[1])
+    predictions = model.transform(val)
 
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
