@@ -151,6 +151,7 @@ def recsys_fit(train, val):
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
 
     from pyspark.ml.recommendation import ALS, ALSModel
+    from pyspark.ml.evaluation import RegressionEvaluator
 
     # Build the recommendation model using ALS on the training data
     als = ALS(maxIter=2, regParam=0.01, 
