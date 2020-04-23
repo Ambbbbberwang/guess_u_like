@@ -160,7 +160,7 @@ def recsys_fit(train, val):
     model = als.fit(train)
 
     print(model.rank)
-    print(model.userFactors.orderBy("user_id").collect())
+    #print(model.userFactors.orderBy("user_id").collect())
 
     # Evaluate the model by computing the RMSE on the test data
     #predictions = model.transform(test)
@@ -211,4 +211,5 @@ def recsys_fit(train, val):
 #records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
     ##records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
 #train, val, test = recommender.train_val_test_split(spark,records)
+#model = recommender.recsys_fit(train, val)
 
