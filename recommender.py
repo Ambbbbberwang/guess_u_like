@@ -101,10 +101,10 @@ def train_val_test_split(spark, records_pq, seed=42):
     frac = dict((u.user_id, 0.5) for u in users2)
     print(frac)
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
-    test_val=test_val.join(test_val_train, ['user_id', 'book_id', 'is_read', 'rating', 'is_reviewed'], 'left_anti')
+    test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') # test join
     print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     # add training 50% back to train
-    train=train.union(test_val_train) # attn: there is an error here
+    train=train.union(test_val_train) # attn: this is not exact - should we do a second round?
     print(train.select('user_id').distinct().count())
     print(test_val.select('user_id').distinct().count())
 
@@ -123,17 +123,19 @@ def train_val_test_split(spark, records_pq, seed=42):
     items_testval=itemsv.union(itemst).distinct()
 
     items_train=train.select('book_id').distinct()
+    print(items_train.orderBy('book_id').show())
     items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
-    print(items_rm.show())
+    print(items_rm.orderBy('book_id').show())
 
     train=train.join(items_rm, ['book_id'], 'left_anti')
+    print(train.orderBy('book_id').show())
     val=val.join(items_rm, ['book_id'], 'left_anti')
     test=test.join(items_rm, ['book_id'], 'left_anti')
     
     # check for each dataset to make sure the split works
-    #print(train.select('user_id').distinct().count())
-    #print(val.select('user_id').distinct().count())
-    #print(test.select('user_id').distinct().count())
+    print(train.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
 
     return train, val, test
 
