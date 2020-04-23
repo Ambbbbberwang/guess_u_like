@@ -50,7 +50,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
         # note: we should rm this column using drop command
         spark_df=spark_df.select('user_id', 'book_id', 'is_read', 'rating', 'is_reviewed', f.count('user_id').over(w).alias('n_int')).sort('user_id')
         spark_df=spark_df.filter(spark_df.n_int>int(filter_num))
-        spark_df=spark_df.drop('n_int').collect() # needs to be tested
+        spark_df=spark_df.drop('n_int')#.collect() # needs to be tested
         #spark_df.show()
  
         # downsampling: sample a percentage of users, and take all of their interactions to make a miniature version of the data.
