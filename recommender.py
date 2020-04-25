@@ -173,6 +173,7 @@ def recsys_fit(train, val, test):
     from pyspark.ml.evaluation import RegressionEvaluator
     from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
     from pyspark.sql import functions as f
+    from pyspark.sql.types import DoubleType
 
 
     # subset the data
