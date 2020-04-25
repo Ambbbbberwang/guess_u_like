@@ -241,8 +241,8 @@ def recsys_fit(train, val, test):
     als.setRegParam(regParams[best_params[0]])
     als.setRank(ranks[best_params[1]])
 
-    print 'The best model was trained with regularization parameter %s' % regParams[best_params[0]]
-    print 'The best model was trained with rank %s' % ranks[best_params[1]]
+    print('The best model was trained with regularization parameter %s' % regParams[best_params[0]])
+    print('The best model was trained with rank %s' % ranks[best_params[1]])
     my_model = models[best_params[0]][best_params[1]]
 
     test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
