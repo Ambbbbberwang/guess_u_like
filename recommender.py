@@ -241,16 +241,24 @@ def recsys_fit(train, val, test):
     als.setRegParam(regParams[best_params[0]])
     als.setRank(ranks[best_params[1]])
 
-    # predict on the test set for evaluation
-    predictions = best_model.transform(test)
-    predictions.show(10)
-    rmse = evaluator.evaluate(predictions)
+    print 'The best model was trained with regularization parameter %s' % regParams[best_params[0]]
+    print 'The best model was trained with rank %s' % ranks[best_params[1]]
+    my_model = models[best_params[0]][best_params[1]]
 
-    # evaluate the best model on the test set
-    print("The final model was trained with rank = %d " % (model.rank) + "and its RMSE on the test set is %f." % (rmse))
-    
+    test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
+    predict_df = my_model.transform(test_df)
 
-    return best_model
+    # Remove NaN values from prediction (due to SPARK-14489)
+    predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
+
+    # Round floats to whole numbers
+    predicted_test_df = predicted_test_df.withColumn("prediction", F.abs(F.round(predicted_test_df["prediction"],0)))
+    # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
+    test_RMSE = reg_eval.evaluate(predicted_test_df)
+
+    print('The model had a RMSE on the test set of {0}'.format(test_RMSE))
+
+    return my_model
 
 
 ### NEXT STEPS ###
