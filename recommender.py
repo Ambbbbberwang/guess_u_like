@@ -231,7 +231,7 @@ def recsys_fit(train, val, test):
         error = reg_eval.evaluate(predicted_plays_df)
         errors[i][j] = error
         models[i][j] = model
-        print 'For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, error)
+        print('For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, error))
         if error < min_error:
           min_error = error
           best_params = [i,j]
