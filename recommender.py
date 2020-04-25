@@ -193,7 +193,7 @@ def recsys_fit(train, val, test):
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
     # evaluate the baseline model on the val set
-    print("The baseline model was trained with maxIter = %d, rank = %d and lambda = %.1f, " % (model._java_obj.getMaxIter(), model.rank, model._java_obj.getRegParam()) + "and its RMSE on the validation set is %f." % (rmse))
+    print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
 
     # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
     paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).addGrid(model.maxIter, [10, 100, 250]).build()
@@ -212,9 +212,7 @@ def recsys_fit(train, val, test):
     rmse = evaluator.evaluate(predictions)
 
     # evaluate the best model on the test set
-    print("The best model was trained with maxIter = %d, rank = %d and lambda = %.1f, " % (best_model._java_obj.getMaxIter(), best_model.rank, best_model._java_obj.getRegParam()) + "and its RMSE on the test set is %f." % (rmse))
-    print(best_model.summary)
-    print(rmse)
+    print("The final model was trained with rank = %d " % (model.rank) + "and its RMSE on the test set is %f." % (rmse))
     
 
     return best_model
