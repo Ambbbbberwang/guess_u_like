@@ -172,6 +172,7 @@ def recsys_fit(train, val, test):
     from pyspark.ml.recommendation import ALS, ALSModel
     from pyspark.ml.evaluation import RegressionEvaluator
     from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
+    from pyspark.sql import functions as f
 
 
     # subset the data
@@ -226,7 +227,7 @@ def recsys_fit(train, val, test):
 
         # Remove NaN values from prediction (due to SPARK-14489)
         predicted_plays_df = predict_df.filter(predict_df.prediction != float('nan'))
-        predicted_plays_df = predicted_plays_df.withColumn("prediction", F.abs(F.round(predicted_plays_df["prediction"],0)))
+        predicted_plays_df = predicted_plays_df.withColumn("prediction", f.abs(f.round(predicted_plays_df["prediction"],0)))
         # Run the previously created RMSE evaluator, reg_eval, on the predicted_ratings_df DataFrame
         error = reg_eval.evaluate(predicted_plays_df)
         errors[i][j] = error
@@ -252,7 +253,7 @@ def recsys_fit(train, val, test):
     predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
 
     # Round floats to whole numbers
-    predicted_test_df = predicted_test_df.withColumn("prediction", F.abs(F.round(predicted_test_df["prediction"],0)))
+    predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
     # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
     test_RMSE = reg_eval.evaluate(predicted_test_df)
 
