@@ -165,6 +165,7 @@ def recsys_fit(train, val, test):
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
     # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
+    # https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/3175648861028866/48824497172554/657465297935335/latest.html
 
     returns the ALS model object
     '''
@@ -192,7 +193,7 @@ def recsys_fit(train, val, test):
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
     # evaluate the baseline model on the val set
-    print("The baseline model was trained with rank = %d and lambda = %.1f, " % (model.getRank(), model.getRegParam()) + "and its RMSE on the validation set is %f." % (rmse))
+    print("The baseline model was trained with rank = %d and lambda = %.1f, " % (model.rank, model.regParam) + "and its RMSE on the validation set is %f." % (rmse))
 
     # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
     paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).build()
@@ -207,10 +208,13 @@ def recsys_fit(train, val, test):
 
     # predict on the test set for evaluation
     predictions = best_model.transform(test)
+    predictions.show(10)
     rmse = evaluator.evaluate(predictions)
 
     # evaluate the best model on the test set
-    print("The best model was trained with rank = %d and lambda = %.1f, " % (best_model.getRank(), best_model.getRegParam()) + "and its RMSE on the test set is %f." % (rmse))
+    print("The best model was trained with rank = %d and lambda = %.1f, " % (best_model.rank, best_model.regParam) + "and its RMSE on the test set is %f." % (rmse))
+
+    
 
     return best_model
 
