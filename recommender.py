@@ -82,7 +82,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     # Select 20% of users to form the validation set (half interactions for training, half in validation). 
     # Select 20% of users to form the test set (same as validation).
 
-    spark: spark object
+    spark: spark
     records_pq: spark df output from data_prep function
     seed: random seed
 
@@ -192,7 +192,7 @@ def recsys_fit(train, val):
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
     rmse = evaluator.evaluate(predictions)
     # evaluate the baseline model on the val set
-    print "The baseline model was trained with rank = %d and lambda = %.1f, " % (model.getRank(), model.getRegParam()) + "and its RMSE on the validation set is %f." % (rmse)
+    print("The baseline model was trained with rank = %d and lambda = %.1f, " % (model.getRank(), model.getRegParam()) + "and its RMSE on the validation set is %f." % (rmse))
 
     # hyperparameter tuning: rank, lambda
     paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).build()
@@ -210,7 +210,7 @@ def recsys_fit(train, val):
     rmse = evaluator.evaluate(predictions)
 
     # evaluate the best model on the test set
-    print "The best model was trained with rank = %d and lambda = %.1f, " % (best_model.getRank(), best_model.getRegParam()) + "and its RMSE on the test set is %f." % (rmse)
+    print("The best model was trained with rank = %d and lambda = %.1f, " % (best_model.getRank(), best_model.getRegParam()) + "and its RMSE on the test set is %f." % (rmse))
 
     return best_model
 
@@ -229,7 +229,7 @@ def recsys_fit(train, val):
 # [o] (6) Tune HP: rank, lambda
 
 # [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
-        # metrics: AUC [x], avg. precision [o], reciprocal rank [o]?
+        # metrics: avg. precision, reciprocal rank
 
 # [o] (8) Main 
 
