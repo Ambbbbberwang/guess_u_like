@@ -196,7 +196,7 @@ def recsys_fit(train, val, test):
     print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
 
     # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
-    paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).addGrid(model.maxIter, [10, 100, 250]).build()
+    paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).build()
 
     crossval = CrossValidator(estimator=model,
                       estimatorParamMaps=paramGrid,
