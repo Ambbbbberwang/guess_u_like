@@ -153,7 +153,7 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     return train, val, test
 
-def recsys_fit(train, val):
+def recsys_fit(train, val, test):
 
     '''
     This function fits the recommender system.
@@ -175,9 +175,9 @@ def recsys_fit(train, val):
 
 
     # subset the data
-    train = train.select(col("user_id"),col("book_id"),col("rating"))
-    val = val.select(col("user_id"),col("book_id"),col("rating"))
-    test = test.select(col("user_id"),col("book_id"),col("rating"))
+    train = train.select("user_id","book_id","rating")
+    val = val.select("user_id","book_id","rating")
+    test = test.select("user_id","book_id","rating")
 
     # Build the recommendation model using ALS on the training data
     als = ALS(maxIter=10, regParam=0.01, 
@@ -194,18 +194,18 @@ def recsys_fit(train, val):
     # evaluate the baseline model on the val set
     print("The baseline model was trained with rank = %d and lambda = %.1f, " % (model.getRank(), model.getRegParam()) + "and its RMSE on the validation set is %f." % (rmse))
 
-    # hyperparameter tuning: rank, lambda
+    # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
     paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).addGrid(model.regParam, [0.001, 0.01, 0.1]).build()
 
     crossval = CrossValidator(estimator=model,
                       estimatorParamMaps=paramGrid,
                       evaluator=RegressionEvaluator(),
-                      numFolds=5)  # use 3+ folds in practice
-
+                      numFolds=5)  
     cvmodel = crossval.fit(val)
+    best_model = model.bestModel 
+    # NOTE: need to improve evaluation metrics
 
-    best_model = model.bestModel
-
+    # predict on the test set for evaluation
     predictions = best_model.transform(test)
     rmse = evaluator.evaluate(predictions)
 
@@ -222,11 +222,11 @@ def recsys_fit(train, val):
 # [x] (3) Check removal of items for correctness
 # [x] (4) In general, users with few interactions (say, fewer than 10) may not provide sufficient data for evaluation, especially after partitioning their observations into train/test. You may discard these users from the experiment, but document your exact steps in the report.
         # DOCUMENT HERE - started by removing users with fewer than 10 interactions in the very beginning of the script
-                        # note: this is a parameter we can tune 
+                        # NOTE: this is a parameter we can tune later
 
 # [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
-# [o] (6) Tune HP: rank, lambda
+# [x] (6) Tune HP: rank, lambda
 
 # [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
         # metrics: avg. precision, reciprocal rank
@@ -244,5 +244,5 @@ def recsys_fit(train, val):
 #records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
     ##records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
 #train, val, test = recommender.train_val_test_split(spark,records)
-#model = recommender.recsys_fit(train, val)
+#model = recommender.recsys_fit(train, val, test)
 
