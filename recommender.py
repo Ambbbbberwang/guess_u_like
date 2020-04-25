@@ -229,7 +229,7 @@ def recsys_fit(train, val, test):
         predicted_plays_df = predict_df.filter(predict_df.prediction != float('nan'))
         predicted_plays_df = predicted_plays_df.withColumn("prediction", f.abs(f.round(predicted_plays_df["prediction"],0)))
         # Run the previously created RMSE evaluator, reg_eval, on the predicted_ratings_df DataFrame
-        error = reg_eval.evaluate(predicted_plays_df)
+        error = evaluator.evaluate(predicted_plays_df)
         errors[i][j] = error
         models[i][j] = model
         print('For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, error))
@@ -255,7 +255,7 @@ def recsys_fit(train, val, test):
     # Round floats to whole numbers
     predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
     # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
-    test_RMSE = reg_eval.evaluate(predicted_test_df)
+    test_RMSE = evaluator.evaluate(predicted_test_df)
 
     print('The model had a RMSE on the test set of {0}'.format(test_RMSE))
 
