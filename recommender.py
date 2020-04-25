@@ -165,8 +165,7 @@ def recsys_fit(train, val, test):
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
     # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
-    # https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/3175648861028866/48824497172554/657465297935335/latest.html
-
+    
     returns the ALS model object
     '''
 
@@ -196,15 +195,51 @@ def recsys_fit(train, val, test):
     print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
 
     # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
-    paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).build()
+    # find a better way to tune: 
+    # https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/3175648861028866/48824497172554/657465297935335/latest.html
 
-    crossval = CrossValidator(estimator=model,
-                      estimatorParamMaps=paramGrid,
-                      evaluator=RegressionEvaluator(),
-                      numFolds=5)  
-    cvmodel = crossval.fit(val)
-    best_model = model.bestModel 
+    #paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).build()
+
+    #crossval = CrossValidator(estimator=model,estimatorParamMaps=paramGrid,evaluator=RegressionEvaluator(),numFolds=5)  
+    #cvmodel = crossval.fit(val)
+    #best_model = model.bestModel 
     # NOTE: need to improve evaluation metrics
+
+    tolerance = 0.03
+    ranks = [4, 8, 12, 16]
+    regParams = [0.15, 0.2, 0.25]
+    errors = [[0]*len(ranks)]*len(regParams)
+    models = [[0]*len(ranks)]*len(regParams)
+    err = 0
+    min_error = float('inf')
+    best_rank = -1
+    i = 0
+    for regParam in regParams:
+      j = 0
+      for rank in ranks:
+        # Set the rank here:
+        als.setParams(rank = rank, regParam = regParam)
+        # Create the model with these parameters.
+        model = als.fit(train)
+        # Run the model to create a prediction. Predict against the validation_df.
+        predict_df = model.transform(val)
+
+        # Remove NaN values from prediction (due to SPARK-14489)
+        predicted_plays_df = predict_df.filter(predict_df.prediction != float('nan'))
+        predicted_plays_df = predicted_plays_df.withColumn("prediction", F.abs(F.round(predicted_plays_df["prediction"],0)))
+        # Run the previously created RMSE evaluator, reg_eval, on the predicted_ratings_df DataFrame
+        error = reg_eval.evaluate(predicted_plays_df)
+        errors[i][j] = error
+        models[i][j] = model
+        print 'For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, error)
+        if error < min_error:
+          min_error = error
+          best_params = [i,j]
+        j += 1
+      i += 1
+
+    als.setRegParam(regParams[best_params[0]])
+    als.setRank(ranks[best_params[1]])
 
     # predict on the test set for evaluation
     predictions = best_model.transform(test)
@@ -229,7 +264,7 @@ def recsys_fit(train, val, test):
 
 # [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
-# [x] (6) Tune HP: rank, lambda
+# [->] (6) Tune HP: rank, lambda
 
 # [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
         # metrics: avg. precision, reciprocal rank
