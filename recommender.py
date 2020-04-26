@@ -26,7 +26,7 @@ def data_read(spark, path):
         return df
     
 # Data subsampling
-def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, filter_num=10):
+def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', fraction=0.01, seed=42, savepq=False, filter_num=10):
     '''
     spark: spark
     spark_df: spark df, output from date_read
@@ -302,16 +302,16 @@ def main(save=False, path = 'hdfs:/user/eac721/onepct_int.parquet'):
 
     #import recommender
 
-    interactions=recommender.data_read(spark, 'interactions')
+    interactions=data_read(spark, 'interactions')
 
     if save == True:
-        records=recommender.data_prep(spark, interactions, path, 0.01, 42, True, 10)
+        records=data_prep(spark, interactions, path, 0.01, 42, True, 10)
     else: 
-        records=recommender.data_prep(spark, interactions, path, 0.01, 42, False, 10)
+        records=data_prep(spark, interactions, path, 0.01, 42, False, 10)
 
-    train, val, test = recommender.train_val_test_split(spark,records)
+    train, val, test = train_val_test_split(spark,records)
 
-    model = recommender.recsys_fit(train, val, test)
+    model = recsys_fit(train, val, test)
 
     return model
 
