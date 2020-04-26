@@ -299,18 +299,18 @@ def recsys_fit(train, val, test):
 
 def main(save=False, path = 'hdfs:/user/eac721/onepct_int.parquet'):
 
-import recommender
+    #import recommender
 
-interactions=recommender.data_read(spark, 'interactions')
+    interactions=recommender.data_read(spark, 'interactions')
 
-if save == True:
-    records=recommender.data_prep(spark, interactions, path, 0.01, 42, True, 10)
-else: 
-    records=recommender.data_prep(spark, interactions, path, 0.01, 42, False, 10)
+    if save == True:
+        records=recommender.data_prep(spark, interactions, path, 0.01, 42, True, 10)
+    else: 
+        records=recommender.data_prep(spark, interactions, path, 0.01, 42, False, 10)
 
-train, val, test = recommender.train_val_test_split(spark,records)
+    train, val, test = recommender.train_val_test_split(spark,records)
 
-model = recommender.recsys_fit(train, val, test)
+    model = recommender.recsys_fit(train, val, test)
 
 return model
 
