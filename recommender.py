@@ -289,6 +289,7 @@ def recsys_fit(train, val, test):
 # [x]      # NOTE: improve by breaking out hp tuning into a function
 
 # [x] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
+            # NOTE: Evaluations should be based on predicted top 500 items for each user.
 # [o]      # NOTE: improve using metrics: avg. precision, reciprocal rank for validation
 
 # [x] (8) Main 
@@ -312,6 +313,6 @@ def main(save=False, path = 'hdfs:/user/eac721/onepct_int.parquet'):
 
     model = recommender.recsys_fit(train, val, test)
 
-return model
+    return model
 
 #main()
