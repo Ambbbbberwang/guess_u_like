@@ -25,7 +25,7 @@ def data_read(spark, path):
                                     schema = 'book_id_csv INT, book_id STRING')
         return df
     
-# Data splitting and subsampling
+# Data subsampling
 def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, filter_num=10):
     '''
     spark: spark
@@ -74,6 +74,7 @@ def data_prep(spark, spark_df, pq_path, fraction=0.01, seed=42, savepq=False, fi
 
     return records_pq
 
+# Data splitting
 def train_val_test_split(spark, records_pq, seed=42):
 
     '''
@@ -151,8 +152,74 @@ def train_val_test_split(spark, records_pq, seed=42):
     #print(val.select('user_id').distinct().count())
     #print(test.select('user_id').distinct().count())
 
+    # subset the data for modeling
+    train = train.select("user_id","book_id","rating")
+    val = val.select("user_id","book_id","rating")
+    test = test.select("user_id","book_id","rating")
+
     return train, val, test
 
+# hyperparameter tuning - used in fitting process
+def grid_search(model, evaluator, ranks = [10], regParams = [0.1]):
+
+    '''
+    This function grid searches for HP tuning the recommender system.
+    
+    model: ALS model
+    evaluator: Regression Evalutator
+    ranks: List of ranks to be tuned (default = [10])
+    regParams: List of regParams to be tuned (default = [0.1])
+
+    returns the optimal ALS model according to evalutor and grid search combination
+
+    References:
+    # https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/3175648861028866/48824497172554/657465297935335/latest.html    
+    '''
+
+    # Set up the model and error checking
+    models = [[0]*len(ranks)]*len(regParams)
+    errors = [[0]*len(ranks)]*len(regParams)
+
+    # Initialize the errors and hps
+    err = 0
+    min_error = float('inf')
+    best_rank = -1
+    i = 0
+
+    # For each combo of params, fit the model and create a prediction using val data
+    for regParam in regParams:
+      j = 0
+      for rank in ranks:
+        
+        model.setParams(rank = rank, regParam = regParam)
+        this_model = model.fit(train)
+        predict_df = this_model.transform(val)
+
+        predicted_ratings_df = predict_df.filter(predict_df.prediction != float('nan'))
+        predicted_ratings_df = predicted_ratings_df.withColumn("prediction", f.abs(f.round(predicted_ratings_df["prediction"],0)))
+        
+        this_error = evaluator.evaluate(predicted_ratings_df)
+        errors[i][j] = this_error
+        models[i][j] = this_model
+        
+        print('For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, this_error))
+        
+        if this_error < min_error:
+          min_error = this_error
+          best_params = [i, j]
+
+        j += 1
+      i += 1
+
+    model.setRegParam(regParams[best_params[0]])
+    model.setRank(ranks[best_params[1]])
+
+    best_model = models[best_params[0]][best_params[1]]
+    print('The best model was trained with regularization parameter %s and rank %s' % (regParams[best_params[0]], ranks[best_params[1]]))
+
+    return best_model
+
+# Fitting model
 def recsys_fit(train, val, test):
 
     '''
@@ -160,107 +227,51 @@ def recsys_fit(train, val, test):
     
     train: Input training data to fit the model
     val: Input validation data to tune the model
+    test: Input test data to evaluate the model
+    
+    returns the optimal ALS model 
 
     References:
     # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
     # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
     # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
-    
-    returns the ALS model object
     '''
 
-    from pyspark.ml.recommendation import ALS, ALSModel
+    from pyspark.ml.recommendation import ALS, Rating
     from pyspark.ml.evaluation import RegressionEvaluator
-    from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
     from pyspark.sql import functions as f
     from pyspark.sql.types import DoubleType
-
-
-    # subset the data
-    train = train.select("user_id","book_id","rating")
-    val = val.select("user_id","book_id","rating")
-    test = test.select("user_id","book_id","rating")
 
     # Build the recommendation model using ALS on the training data
     als = ALS(maxIter=10, regParam=0.01, 
           userCol="user_id", itemCol="book_id", ratingCol="rating",
           coldStartStrategy="drop",
           implicitPrefs=False)
-    model = als.fit(train)
-
-    #baseline evaluation on validation data:
-    predictions = model.transform(val)
-
+    #model = als.fit(train)
+    #predictions = model.transform(val)
     evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
-    rmse = evaluator.evaluate(predictions)
+    
+    #rmse = evaluator.evaluate(predictions)
     # evaluate the baseline model on the val set
-    print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
+    #print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
 
-    # hyperparameter tuning: grid serach for rank, lambda using validation set, 5 fold CV
-    # find a better way to tune: 
-    # https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/3175648861028866/48824497172554/657465297935335/latest.html
+    # hyperparameter tuning: grid serach for rank, lambda using validation set
+    print('Running grid search:')
+    best_model = grid_search(model=als, evaluator=evaluator) #, ranks = [5, 10, 20], regParams = [0.01, 0.05, 0.1]
 
-    #paramGrid = ParamGridBuilder().addGrid(model.rank, [10, 100, 1000]).build()
-
-    #crossval = CrossValidator(estimator=model,estimatorParamMaps=paramGrid,evaluator=RegressionEvaluator(),numFolds=5)  
-    #cvmodel = crossval.fit(val)
-    #best_model = model.bestModel 
-    # NOTE: need to improve evaluation metrics
-
-    tolerance = 0.03
-    ranks = [4, 8, 12, 16]
-    regParams = [0.15, 0.2, 0.25]
-    errors = [[0]*len(ranks)]*len(regParams)
-    models = [[0]*len(ranks)]*len(regParams)
-    err = 0
-    min_error = float('inf')
-    best_rank = -1
-    i = 0
-    for regParam in regParams:
-      j = 0
-      for rank in ranks:
-        # Set the rank here:
-        als.setParams(rank = rank, regParam = regParam)
-        # Create the model with these parameters.
-        model = als.fit(train)
-        # Run the model to create a prediction. Predict against the validation_df.
-        predict_df = model.transform(val)
-
-        # Remove NaN values from prediction (due to SPARK-14489)
-        predicted_plays_df = predict_df.filter(predict_df.prediction != float('nan'))
-        predicted_plays_df = predicted_plays_df.withColumn("prediction", f.abs(f.round(predicted_plays_df["prediction"],0)))
-        # Run the previously created RMSE evaluator, reg_eval, on the predicted_ratings_df DataFrame
-        error = evaluator.evaluate(predicted_plays_df)
-        errors[i][j] = error
-        models[i][j] = model
-        print('For rank %s, regularization parameter %s the RMSE is %s' % (rank, regParam, error))
-        if error < min_error:
-          min_error = error
-          best_params = [i,j]
-        j += 1
-      i += 1
-
-    als.setRegParam(regParams[best_params[0]])
-    als.setRank(ranks[best_params[1]])
-
-    print('The best model was trained with regularization parameter %s' % regParams[best_params[0]])
-    print('The best model was trained with rank %s' % ranks[best_params[1]])
-    my_model = models[best_params[0]][best_params[1]]
-
+    print('Fitting the champion model:')
     test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
-    predict_df = my_model.transform(test_df)
-
-    # Remove NaN values from prediction (due to SPARK-14489)
+    predict_df = best_model.transform(test_df)
     predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
 
-    # Round floats to whole numbers
+    # Round floats to whole numbers to compare
     predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
     # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
     test_RMSE = evaluator.evaluate(predicted_test_df)
 
-    print('The model had a RMSE on the test set of {0}'.format(test_RMSE))
+    print('The champion model had a RMSE on the test set of {0}'.format(test_RMSE))
 
-    return my_model
+    return best_model
 
 
 ### NEXT STEPS ###
@@ -274,23 +285,33 @@ def recsys_fit(train, val, test):
 
 # [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
-# [->] (6) Tune HP: rank, lambda
+# [x] (6) Tune HP: rank, lambda
+# [x]      # NOTE: improve by breaking out hp tuning into a function
 
-# [o] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
-        # metrics: avg. precision, reciprocal rank
+# [x] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
+# [o]      # NOTE: improve using metrics: avg. precision, reciprocal rank for validation
 
-# [o] (8) Main 
+# [x] (8) Main 
 
 # [o] (9) Extension 1
 
 # [o] (10) Extension 2
 
-#def main():
+def main(save=False, path = 'hdfs:/user/eac721/onepct_int.parquet'):
 
-#import recommender
-#interactions=recommender.data_read(spark, 'interactions')
-#records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
-    ##records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
-#train, val, test = recommender.train_val_test_split(spark,records)
-#model = recommender.recsys_fit(train, val, test)
+import recommender
 
+interactions=recommender.data_read(spark, 'interactions')
+
+if save == True:
+    records=recommender.data_prep(spark, interactions, path, 0.01, 42, True, 10)
+else: 
+    records=recommender.data_prep(spark, interactions, path, 0.01, 42, False, 10)
+
+train, val, test = recommender.train_val_test_split(spark,records)
+
+model = recommender.recsys_fit(train, val, test)
+
+return model
+
+#main()
