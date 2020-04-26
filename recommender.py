@@ -264,33 +264,31 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
 # [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
 # [x] (6) Tune HP: rank, lambda
-# [o]      # NOTE: improve by breaking out hp tuning into a function
+# [o]      # NOTE: could improve by breaking out hp tuning into a function
 
-# [x] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
-            # NOTE: Evaluations should be based on predicted top 500 items for each user.
+# [x] (7) Evaluate - RSME
+           # NOTE: Evaluations should be based on predicted top 500 items for each user.
 # [o]      # NOTE: improve using metrics: avg. precision, reciprocal rank for validation
 
-# [o] (8) Main 
+# [o] (8) Main?
 
 # [o] (9) Extension 1
 
 # [o] (10) Extension 2
 
-def main(save=False, path = 'hdfs:/user/eac721/onepct_int.parquet'):
-
-    #import recommender
-
-    interactions=data_read(spark, 'interactions')
-
-    if save == True:
-        records=data_prep(spark, interactions, path, 0.01, 42, True, 10)
-    else: 
-        records=data_prep(spark, interactions, path, 0.01, 42, False, 10)
-
-    train, val, test = train_val_test_split(spark,records)
-
-    model = recsys_fit(train, val, test)
-
-    return model
-
 #main()
+
+
+#import recommender
+#interactions=recommender.data_read(spark, 'interactions')
+#records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
+#train, val, test = recommender.train_val_test_split(spark,records)
+#model = recommender.recsys_fit(train, val, test)
+
+
+# # Generate top 10 movie recommendations for a specified set of users
+#users = ratings.select(als.getUserCol()).distinct().limit(3)
+#userSubsetRecs = model.recommendForUserSubset(users, 10)
+# Generate top 10 user recommendations for a specified set of movies
+#movies = ratings.select(als.getItemCol()).distinct().limit(3)
+#movieSubSetRecs = model.recommendForItemSubset(movies, 10)
