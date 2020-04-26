@@ -159,6 +159,62 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     return train, val, test
 
+
+
+# Fitting model
+def recsys_fit(train, val, test):
+
+    '''
+    This function fits the recommender system.
+    
+    train: Input training data to fit the model
+    val: Input validation data to tune the model
+    test: Input test data to evaluate the model
+    
+    returns the optimal ALS model 
+
+    References:
+    # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
+    # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
+    # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
+    '''
+
+    from pyspark.ml.recommendation import ALS #, Rating
+    from pyspark.ml.evaluation import RegressionEvaluator
+    from pyspark.sql import functions as f
+    from pyspark.sql.types import DoubleType
+
+    # Build the recommendation model using ALS on the training data
+    als = ALS(maxIter=10, regParam=0.01, 
+          userCol="user_id", itemCol="book_id", ratingCol="rating",
+          coldStartStrategy="drop",
+          implicitPrefs=False)
+    #model = als.fit(train)
+    #predictions = model.transform(val)
+    evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
+    
+    #rmse = evaluator.evaluate(predictions)
+    # evaluate the baseline model on the val set
+    #print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
+
+    # hyperparameter tuning: grid serach for rank, lambda using validation set
+    print('Running grid search:')
+    best_model = grid_search(model=als, evaluator=evaluator) #, ranks = [5, 10, 20], regParams = [0.01, 0.05, 0.1]
+
+    print('Fitting the champion model:')
+    test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
+    predict_df = best_model.transform(test_df)
+    predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
+
+    # Round floats to whole numbers to compare
+    predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
+    # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
+    test_RMSE = evaluator.evaluate(predicted_test_df)
+
+    print('The champion model had a RMSE on the test set of {0}'.format(test_RMSE))
+
+    return best_model
+
 # hyperparameter tuning - used in fitting process
 def grid_search(model, evaluator, train=train, val=val, test=test, ranks = [10], regParams = [0.1]):
 
@@ -218,62 +274,6 @@ def grid_search(model, evaluator, train=train, val=val, test=test, ranks = [10],
     print('The best model was trained with regularization parameter %s and rank %s' % (regParams[best_params[0]], ranks[best_params[1]]))
 
     return best_model
-
-# Fitting model
-def recsys_fit(train, val, test):
-
-    '''
-    This function fits the recommender system.
-    
-    train: Input training data to fit the model
-    val: Input validation data to tune the model
-    test: Input test data to evaluate the model
-    
-    returns the optimal ALS model 
-
-    References:
-    # https://spark.apache.org/docs/latest/api/python/pyspark.ml.html#module-pyspark.ml.recommendation
-    # https://www.kaggle.com/vchulski/tutorial-collaborative-filtering-with-pyspark
-    # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
-    '''
-
-    from pyspark.ml.recommendation import ALS #, Rating
-    from pyspark.ml.evaluation import RegressionEvaluator
-    from pyspark.sql import functions as f
-    from pyspark.sql.types import DoubleType
-
-    # Build the recommendation model using ALS on the training data
-    als = ALS(maxIter=10, regParam=0.01, 
-          userCol="user_id", itemCol="book_id", ratingCol="rating",
-          coldStartStrategy="drop",
-          implicitPrefs=False)
-    #model = als.fit(train)
-    #predictions = model.transform(val)
-    evaluator = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
-    
-    #rmse = evaluator.evaluate(predictions)
-    # evaluate the baseline model on the val set
-    #print("The baseline model was trained with rank = %d " % (model.rank) + "and its RMSE on the validation set is %f." % (rmse))
-
-    # hyperparameter tuning: grid serach for rank, lambda using validation set
-    print('Running grid search:')
-    best_model = grid_search(model=als, evaluator=evaluator) #, ranks = [5, 10, 20], regParams = [0.01, 0.05, 0.1]
-
-    print('Fitting the champion model:')
-    test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
-    predict_df = best_model.transform(test_df)
-    predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
-
-    # Round floats to whole numbers to compare
-    predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
-    # Run the previously created RMSE evaluator, reg_eval, on the predicted_test_df DataFrame
-    test_RMSE = evaluator.evaluate(predicted_test_df)
-
-    print('The champion model had a RMSE on the test set of {0}'.format(test_RMSE))
-
-    return best_model
-
-
 ### NEXT STEPS ###
 
 # [x] (1) Convert to parquet and write file function 
