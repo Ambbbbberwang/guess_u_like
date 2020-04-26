@@ -237,7 +237,7 @@ def recsys_fit(train, val, test):
     # https://spark.apache.org/docs/2.2.0/ml-collaborative-filtering.html
     '''
 
-    from pyspark.ml.recommendation import ALS, Rating
+    from pyspark.ml.recommendation import ALS #, Rating
     from pyspark.ml.evaluation import RegressionEvaluator
     from pyspark.sql import functions as f
     from pyspark.sql.types import DoubleType
@@ -292,7 +292,7 @@ def recsys_fit(train, val, test):
             # NOTE: Evaluations should be based on predicted top 500 items for each user.
 # [o]      # NOTE: improve using metrics: avg. precision, reciprocal rank for validation
 
-# [x] (8) Main 
+# [o] (8) Main 
 
 # [o] (9) Extension 1
 
