@@ -160,7 +160,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     return train, val, test
 
 # hyperparameter tuning - used in fitting process
-def grid_search(model, evaluator, ranks = [10], regParams = [0.1]):
+def grid_search(model, evaluator, train=train, val=val, test=test, ranks = [10], regParams = [0.1]):
 
     '''
     This function grid searches for HP tuning the recommender system.
@@ -286,7 +286,7 @@ def recsys_fit(train, val, test):
 # [x] (5) Implement basic recsys: pyspark.ml.recommendation module
 
 # [x] (6) Tune HP: rank, lambda
-# [x]      # NOTE: improve by breaking out hp tuning into a function
+# [o]      # NOTE: improve by breaking out hp tuning into a function
 
 # [x] (7) Evaluate - Evaluations should be based on predicted top 500 items for each user.
             # NOTE: Evaluations should be based on predicted top 500 items for each user.
