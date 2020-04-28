@@ -251,8 +251,19 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
 
     return best_model # what do we want to return here?
 
-### NEXT STEPS ###
 
+# Extension 1: 
+# Exploration: use the learned representation to develop a visualization of the items and users, 
+# e.g., using T-SNE or UMAP. The visualization should somehow integrate additional information 
+# (features, metadata, or genre tags) to illustrate how items are distributed in the learned space.
+
+# References: 
+# https://www.liip.ch/en/blog/the-magic-of-tsne-for-visualizing-your-data-features
+# https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
+# https://towardsdatascience.com/an-introduction-to-t-sne-with-python-example-5a3a293108d1
+
+
+### NEXT STEPS ###
 # [x] (1) Convert to parquet and write file function 
 # [x] (2) Check the splitting function for correctness
 # [x] (3) Check removal of items for correctness
