@@ -157,9 +157,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     val = val.select("user_id","book_id","rating")
     test = test.select("user_id","book_id","rating")
 
-    return train, val, test
-
-
+    return train, val, test 
 
 # Fitting model
 def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
@@ -243,6 +241,7 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
     print('Fitting the champion model:')
     test_df = test.withColumn("rating", test["rating"].cast(DoubleType()))
     predict_df = best_model.transform(test_df)
+    # TO DO: pick only the top 500 for each user
     predicted_test_df = predict_df.filter(predict_df.prediction != float('nan'))
     # Round floats to whole numbers to compare
     predicted_test_df = predicted_test_df.withColumn("prediction", f.abs(f.round(predicted_test_df["prediction"],0)))
@@ -250,7 +249,7 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
     test_RMSE = evaluator.evaluate(predicted_test_df)
     print('The champion model had a RMSE on the test set of {0}'.format(test_RMSE))
 
-    return best_model
+    return best_model # what do we want to return here?
 
 ### NEXT STEPS ###
 
@@ -265,6 +264,7 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
 
 # [x] (6) Tune HP: rank, lambda
 # [o]      # NOTE: could improve by breaking out hp tuning into a function
+           # REMINDER: high rank --> overfitting; low rank --> underfitting 
 
 # [x] (7) Evaluate - RSME
            # NOTE: Evaluations should be based on predicted top 500 items for each user.
