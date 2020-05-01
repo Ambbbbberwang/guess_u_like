@@ -252,9 +252,9 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
     return best_model # what do we want to return here?
 
 
-‘’’
-# DRAFT
 
+# DRAFT
+"""
 def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.15], 
             maxIters = [10]):
     
@@ -300,8 +300,7 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
         
         
         # To Be Continuted...
-
-‘’’
+"""
 
 # Extension 1: 
 # Exploration: use the learned representation to develop a visualization of the items and users, 
