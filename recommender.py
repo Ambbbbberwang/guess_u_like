@@ -50,20 +50,29 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
         # note: we should rm this column using drop command
         spark_df=spark_df.select('user_id', 'book_id', 'is_read', 'rating', 'is_reviewed', f.count('user_id').over(w).alias('n_int')).sort('user_id')
         spark_df=spark_df.filter(spark_df.n_int>int(filter_num))
-        spark_df=spark_df.drop('n_int')#.collect() # needs to be tested
+        spark_df=spark_df.drop('n_int')
+        #test the drop works:
+        #spark_df.createOrReplaceTempView('spark_df') #test before filter
+        #small = spark.sql('SELECT * FROM spark_df WHERE n_int <= 10')
+        #small.count() #460348
+
+        #Original interaction dataset 228,648,342 rows
+        #After dropping users with iteractions less than 10, remains rows 228,187,994
         #spark_df.show()
  
         # downsampling: sample a percentage of users, and take all of their interactions to make a miniature version of the data.
-        users=spark_df.select('user_id').distinct()
-        user_samp=users.sample(False, fraction=fraction, seed=seed)
+        users=spark_df.select('user_id').distinct() 
+        user_samp=users.sample(False, fraction=fraction, seed=seed) #77726
         #user_samp.show()
+        
 
         # inner join: keep only the randomly sampled users and all their interactions (based on percentage specified)
-        records=spark_df.join(user_samp, ['user_id'])
-        
+        records=spark_df.join(user_samp, ['user_id']) #2387376
+    
+
         # check that this matches the desired percentage
-        #print(records.select('user_id').distinct().count()) 
-        #print(spark_df.select('user_id').distinct().count())  
+        #print(records.select('user_id').distinct().count())  #7678
+        #print(spark_df.select('user_id').distinct().count()) #766717 
 
         # write to parquet format
         # note: this will fail if the path already exists 
@@ -94,16 +103,17 @@ def train_val_test_split(spark, records_pq, seed=42):
     #print(records_pq.select('user_id').distinct().count())
 
     # find the unique users:
-    users=records_pq.select('user_id').distinct()
-    #print(users.count())
+    #users=records_pq.select('user_id').distinct()
+    #print(users.count()) #7711
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
     users=records_pq.select('user_id').distinct()
-    user_samp=users.sample(False, fraction=0.6, seed=seed)
+    user_samp=users.sample(False, fraction=0.6, seed=seed) 
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
-    #print(train.select('user_id').distinct().count())
-    #print(test_val.select('user_id').distinct().count())
+    #print(train.select('user_id').distinct().count())  #4591
+    #print(test_val.select('user_id').distinct().count()) #3120
+
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
