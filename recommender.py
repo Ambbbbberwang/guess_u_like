@@ -262,6 +262,56 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
     return best_model # what do we want to return here?
 
 
+
+# DRAFT
+"""
+def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.15], 
+            maxIters = [10]):
+    
+    from pyspark.ml.recommendation import ALS #, Rating
+    from pyspark.ml.evaluation import RegressionEvaluator
+    from pyspark.sql import functions as f
+    from pyspark.sql.types import DoubleType
+    #from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+    #from hypopt import GridSearch
+    #from sklearn.metrics import make_scorer
+    import itertools
+    import numpy as np
+
+    # Build the recommendation model using ALS on the training data
+    als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
+              coldStartStrategy="drop", implicitPrefs=False, seed = 42)
+    
+    #paramMap = ParamGridBuilder() \
+    #                .addGrid(als.rank, ranks) \
+    #                .addGrid(als.maxIter, maxIters) \
+    #                .addGrid(als.regParam, regParams) \
+    #                .build()
+    
+    param_list=[ranks,regParams, maxIters]
+    param_grid=list(iterrools.product(*param_list))
+    
+    models = np.zeros([len(ranks), len(regParams), len(maxIters)])
+    errors = np.zeros([len(ranks), len(regParams), len(maxIters)])
+    
+    err = 0
+    min_error = float('inf')
+    best_rank = -1
+    i = 0
+    
+    print('Running grid search:')
+    for params in param_grid:
+        print('Try :', params)
+        als.setParams(rank=params[0], regParam=params[1], maxIter=params[2])
+        cur_model = als.fit(train)
+        predict_df = this_model.transform(val)
+        
+        cur_model.recommendForAllUsers(500)
+        
+        
+        # To Be Continuted...
+"""
+
 # Extension 1: 
 # Exploration: use the learned representation to develop a visualization of the items and users, 
 # e.g., using T-SNE or UMAP. The visualization should somehow integrate additional information 
