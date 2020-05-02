@@ -79,12 +79,10 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
         # remove the file with "hadoop fs -rm -r onepct_int.parquet"
         records.orderBy('user_id').write.parquet(pq_path)
 
-    records_pq = spark.read.parquet(pq_path)
-
-    return records_pq
+    #return records
 
 # Data splitting
-def train_val_test_split(spark, records_pq, seed=42):
+def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parquet', seed=42):
 
     '''
     # This function takes the following splitting procedure: 
@@ -99,6 +97,9 @@ def train_val_test_split(spark, records_pq, seed=42):
     returns train, val, test data
     '''
 
+    records_pq = spark.read.parquet(records_path)
+    
+    records_pq = records_pq.withColumn('user_id', records['user_id'].cast('string'))
     # number of distinct users for checking
     #print(records_pq.select('user_id').distinct().count())
 
@@ -123,7 +124,6 @@ def train_val_test_split(spark, records_pq, seed=42):
     frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
     print(len(frac))
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
-
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
 
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
