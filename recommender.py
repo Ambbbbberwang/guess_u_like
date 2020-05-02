@@ -112,7 +112,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     train=user_samp.join(records_pq, ['user_id'])
     test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
     #print(train.select('user_id').distinct().count())  #4591
-    #print(test_val.select('user_id').distinct().count()) #3120
+    print('Number of validation users',test_val.select('user_id').distinct().count()) #3120
 
 
     # split the remaining set into 50/50 by users' interactions
@@ -121,12 +121,24 @@ def train_val_test_split(spark, records_pq, seed=42):
     frac = dict((u.user_id, 0.5) for u in users2)
     #print(frac)
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
+
+    print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
+
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
+    
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     # add training 50% back to train
     train=train.union(test_val_train) 
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
+
+    #####test all users in test_val are in train#####
+    train_user = train.select('user_id').distinct().collect()
+    val_user = test_val.select('user_id').distinct().collect()
+    for u in val_user:
+        if u not in train_user:
+            print('I am not included in train!! (user_id)',u)
+
 
    # split the test_val set into test (20%), val (20%) by user
     users3=test_val.select('user_id').distinct()
@@ -141,7 +153,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     itemsv=val.select('book_id').distinct()
     itemst=test.select('book_id').distinct()
     items_testval=itemsv.union(itemst).distinct()
-
+    #print(items_testval.orderBy('book_id').show()) 
     items_train=train.select('book_id').distinct()
     #print(items_train.orderBy('book_id').show())
     items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
