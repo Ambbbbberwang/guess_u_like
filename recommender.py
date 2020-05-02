@@ -119,6 +119,7 @@ def train_val_test_split(spark, records_pq, seed=42):
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     #users2=test_val.select('user_id').distinct().collect()
     #frac = dict((u.user_id, 0.5) for u in users2)
+    df_count = test_val.groupBy('user_id').count().sort('user_id')
     frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
     print(len(frac))
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
@@ -365,7 +366,8 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
 
 #import recommender
 #interactions=recommender.data_read(spark, 'interactions')
-#records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
+#records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
+## records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
 #train, val, test = recommender.train_val_test_split(spark,records)
 #model = recommender.recsys_fit(train, val, test)
 
