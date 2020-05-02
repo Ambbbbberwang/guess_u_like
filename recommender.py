@@ -81,7 +81,7 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
 
     #return records
 
-def rand_samp(df):
+def rand_samp(spark, df):
 
     from pyspark.sql import SQLContext
 
