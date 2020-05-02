@@ -81,6 +81,23 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
 
     #return records
 
+def rand_samp(df):
+
+    from pyspark.sql.types import *
+
+    users = df.select('user_id').distinct()
+
+    test = sqlContext.createDataFrame(sc.emptyRDD(), df.schema)
+    val = sqlContext.createDataFrame(sc.emptyRDD(), df.schema)  
+
+    for u in users: 
+        temp = df.filter(df['user_id']==u)
+        temp1, temp2 = temp.randomSplit([0.5, 0.5], seed = 42)
+        test = test.union(temp1)
+        val = val.union(temp2)
+
+    return test, val
+
 # Data splitting
 def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parquet', seed=42):
 
@@ -122,7 +139,7 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #frac = dict((u.user_id, 0.5) for u in users2)
     df_count = test_val.groupBy('user_id').count().sort('user_id')
     frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
-    print(len(frac))
+    #print(len(frac))
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
 
