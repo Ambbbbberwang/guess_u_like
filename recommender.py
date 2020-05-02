@@ -86,7 +86,7 @@ def rand_samp(spark, df):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
     
-    sc =SparkContext()
+    sc =spark.SparkContext
 
     users = df.select('user_id').distinct()
 
