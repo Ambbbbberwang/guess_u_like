@@ -14,15 +14,15 @@ def data_read(spark, path):
     '''
     if path=='interactions':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/goodreads_interactions.csv', header = True, 
-                                    schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
+                                    schema = 'user_id STRING, book_id STRING, is_read INT, rating FLOAT, is_reviewed INT')
         return df
     elif path=='users':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/user_id_map.csv', header = True, 
-                                    schema = 'user_id_csv INT, user_id STRING')
+                                    schema = 'user_id_csv STRING, user_id STRING')
         return df
     elif path=='books':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/book_id_map.csv', header = True, 
-                                    schema = 'book_id_csv INT, book_id STRING')
+                                    schema = 'book_id_csv STRING, book_id STRING')
         return df
     
 # Data subsampling
@@ -117,9 +117,10 @@ def train_val_test_split(spark, records_pq, seed=42):
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    users2=test_val.select('user_id').distinct().collect()
-    frac = dict((u.user_id, 0.5) for u in users2)
-    #print(frac)
+    #users2=test_val.select('user_id').distinct().collect()
+    #frac = dict((u.user_id, 0.5) for u in users2)
+    frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
+    print(len(frac))
     test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
 
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
