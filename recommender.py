@@ -83,7 +83,10 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
 
 def rand_samp(spark, df):
 
+    from pyspark import SparkContext
     from pyspark.sql import SQLContext
+    
+    sc =SparkContext()
 
     users = df.select('user_id').distinct()
 
