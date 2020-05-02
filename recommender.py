@@ -119,7 +119,8 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
 
     records_pq = spark.read.parquet(records_path)
 
-    records_pq = records_pq.withColumn('user_id', records_pq['user_id'].cast('string'))
+    #records_pq = records_pq.withColumn('user_id', records_pq['user_id'].cast('string'))
+    
     # number of distinct users for checking
     #print(records_pq.select('user_id').distinct().count())
 
@@ -140,10 +141,17 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
     #users2=test_val.select('user_id').distinct().collect()
     #frac = dict((u.user_id, 0.5) for u in users2)
+    '''
     df_count = test_val.groupBy('user_id').count().sort('user_id')
+    
     frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
+    '''
+
+    #New method to do the second partition (half interaction of validation set to training set)
+    frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
     #print(len(frac))
-    test_val_train=test_val.sampleBy('user_id', fractions=frac, seed=seed)
+    test_val_kb = test_val.rdd.keyBy(lambda x: x['user_id'])
+    test_val_train=test_val_kb.sampleByKey('user_id', fractions=frac2, seed=seed).map(lambda x: x[1]).toDF(test_val.columns)
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
 
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
