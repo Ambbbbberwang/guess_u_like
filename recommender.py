@@ -152,6 +152,15 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #print(len(frac))
     test_val_kb = test_val.rdd.keyBy(lambda x: x['user_id'])
     test_val_train=test_val_kb.sampleByKey('user_id', fractions=frac2, seed=seed).map(lambda x: x[1]).toDF(test_val.columns)
+    #reset the schema
+    test_val_train = test_val_train.withColumn('is_read',test_val_train['is_read'].cast('int'))
+    test_val_train = test_val_train.withColumn('is_reviewed',test_val_train['is_reviewed'].cast('int'))
+    test_val_train = test_val_train.withColumn('rating',test_val_train['rating'].cast('float'))    
+    print('schema of test_val_train', test_val_train.printSchema)
+    print('schema of train', train.printSchema)
+
+
+
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
 
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
