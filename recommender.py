@@ -98,8 +98,8 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     '''
 
     records_pq = spark.read.parquet(records_path)
-    
-    records_pq = records_pq.withColumn('user_id', records['user_id'].cast('string'))
+
+    records_pq = records_pq.withColumn('user_id', records_pq['user_id'].cast('string'))
     # number of distinct users for checking
     #print(records_pq.select('user_id').distinct().count())
 
