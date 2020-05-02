@@ -87,8 +87,8 @@ def rand_samp(spark, df):
 
     users = df.select('user_id').distinct()
 
-    test = sqlContext.createDataFrame(sc.emptyRDD(), df.schema)
-    val = sqlContext.createDataFrame(sc.emptyRDD(), df.schema)  
+    test = SQLContext.createDataFrame(sc.emptyRDD(), df.schema)
+    val = SQLContext.createDataFrame(sc.emptyRDD(), df.schema)  
 
     for u in users: 
         temp = df.filter(df['user_id']==u)
@@ -352,7 +352,57 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
 # https://www.liip.ch/en/blog/the-magic-of-tsne-for-visualizing-your-data-features
 # https://towardsdatascience.com/visualising-high-dimensional-datasets-using-pca-and-t-sne-in-python-8ef87e7915b
 # https://towardsdatascience.com/an-introduction-to-t-sne-with-python-example-5a3a293108d1
+"""
+def viz_rep(model, item = True, user = False):
 
+    # in python
+    # https://github.com/DmitryUlyanov/Multicore-TSNE
+
+    #dir(model)
+
+    #model.itemFactors.show()
+    #model.userFactors.show()
+
+    import numpy as np
+    import pandas as pd
+    from MulticoreTSNE import MulticoreTSNE as TSNE
+
+
+    i = model.itemFactors.toPandas()
+    i2 = i.features.apply(pd.Series)
+    i2['item_id'] = i['id']
+
+    items = i.sample(n=10000, random_state=1)
+
+    # merge with genres
+    genres=spark.read.json("genres.json", multiLine=True)
+
+    X=items.join(genres, ['book_id'])
+
+    #items.to_csv(index = False)
+    #X = pd.read_csv('items.csv')
+
+    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
+    embeddings = tsne.fit_transform(X.iloc[:,-1])
+    vis_x = embeddings[:, 0]
+    vis_y = embeddings[:, 1]
+
+    #./bin/spark-submit mypythonfile.py
+
+    return vis_x, vis_y, X.genre
+
+def tsneplot(vis_x, vis_y, X.genre):
+    import matplotlib
+    matplotlib.use('Agg')
+
+    matplotlib.pyplot.scatter(vis_x, vis_y, c=X.genre, cmap=plt.cm.get_cmap("jet", 10), marker='.')
+    matplotlib.pyplot.colorbar(ticks=range(10))
+    matplotlib.pyplot.clim(-0.5, 9.5)
+    matplotlib.pyplot.show()
+
+    plt.savefig('tsne_test.png')
+    
+"""
 
 ### NEXT STEPS ###
 # [x] (1) Convert to parquet and write file function 
