@@ -136,6 +136,15 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #print(train.select('user_id').distinct().count())  #4591
     print('Number of validation users',test_val.select('user_id').distinct().count()) #3120
 
+    ##check train and test_val don't have overlap users
+    train_user1 = train.select('user_id').distinct().collect()
+    val_user1 = test_val.select('user_id').distinct().collect()
+    for u in val_user1:
+        if u in train_user1:
+            print('First split: This is a problem!!! User in both train and val:',u)
+
+
+
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
