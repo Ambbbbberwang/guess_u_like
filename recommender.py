@@ -14,15 +14,15 @@ def data_read(spark, path):
     '''
     if path=='interactions':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/goodreads_interactions.csv', header = True, 
-                                    schema = 'user_id STRING, book_id STRING, is_read INT, rating FLOAT, is_reviewed INT')
+                                    schema = 'user_id INT, book_id STRING, is_read INT, rating FLOAT, is_reviewed INT')
         return df
     elif path=='users':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/user_id_map.csv', header = True, 
-                                    schema = 'user_id_csv STRING, user_id STRING')
+                                    schema = 'user_id_csv INT, user_id INT')
         return df
     elif path=='books':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/book_id_map.csv', header = True, 
-                                    schema = 'book_id_csv STRING, book_id STRING')
+                                    schema = 'book_id_csv INT, book_id INT')
         return df
     
 # Data subsampling
