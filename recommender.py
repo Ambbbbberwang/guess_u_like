@@ -148,8 +148,10 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    #users2=test_val.select('user_id').distinct().collect()
-    #frac = dict((u.user_id, 0.5) for u in users2)
+    users2=test_val.select('user_id').distinct().collect()
+    frac = dict((u.user_id, 0.5) for u in users2)
+    test_val_train = test_val.sampleBy('user_id',fractions = frac, seed=seed)
+
     '''
     df_count = test_val.groupBy('user_id').count().sort('user_id')
     
@@ -349,7 +351,7 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
     #                .build()
     
     param_list=[ranks,regParams, maxIters]
-    param_grid=list(itertools.product(*param_list))
+    param_grid=list(iterrools.product(*param_list))
     
     models = np.zeros([len(ranks), len(regParams), len(maxIters)])
     errors = np.zeros([len(ranks), len(regParams), len(maxIters)])
@@ -364,7 +366,7 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
         print('Try :', params)
         als.setParams(rank=params[0], regParam=params[1], maxIter=params[2])
         cur_model = als.fit(train)
-        predict_df = cur_model.transform(val)
+        predict_df = this_model.transform(val)
         
         cur_model.recommendForAllUsers(500)
         
