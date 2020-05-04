@@ -1,11 +1,18 @@
 from pyspark import Row
+from pyspark.sql.functions import *
+
+
 
 test_df = spark.createDataFrame([(1, [Row(a=1,b=2), Row(a=3,b=4)]), (2, [Row(a=3,b=4),Row(a=0,b=5)]), (3, [Row(a=-3,b=2),Row(a=13,b=40)])],("id", "an_array"))
 
 
 test_df = test_df.select('id','an_array',posexplode('an_array')).drop('pos').drop('an_array')
 
-test_df.show()
+
+
+test_df.select('id',f.expr('col.a'),f.expr('col.b')).show()
+
+
 
 '''
 +---+-------------------+
@@ -32,7 +39,7 @@ test_df.show()
 |  3|[13, 40]|
 +---+--------+
 
----> Still need to do this part:
+---> DONE this part:
 
 id|  a | b|
 1 |  1 | 2|
