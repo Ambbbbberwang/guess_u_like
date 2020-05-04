@@ -30,7 +30,7 @@ def evaluation(model,val,metric):
 	#with col names 'user_id', 'book_id', 'rating' | instead of 'recommendations'
 	#before running the following code!!!
 
-	#Please refer to Amber_test_dataframe.py for more test code
+	#Please refer to test_dataframe.py for more test code
 
 	#################################
 
