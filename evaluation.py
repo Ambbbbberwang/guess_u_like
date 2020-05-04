@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 
+
+from pyspark.ml.recommendation import ALS
+
+als = ALS(maxIter=10, regParam=0.01, userCol="user_id", itemCol="book_id", ratingCol="rating",
+	              coldStartStrategy="drop", implicitPrefs=False, seed = 42)
+
+
 model = als.fit(train)
 
 def evaluation(model,val,metric):
 
-	from pyspark.ml.recommendation import ALS
 	from pyspark.mllib.evaluation import RegressionMetrics
 	import pyspark.sql.functions as f
 	from pyspark.sql.functions import *
 
-	als = ALS(maxIter=10, regParam=0.01, userCol="user_id", itemCol="book_id", ratingCol="rating",
-	              coldStartStrategy="drop", implicitPrefs=False, seed = 42)
-	
 	#all users in val
 	user_val = val.select('user_id').distinct()
 	#recommend top 500 books for each user in val
