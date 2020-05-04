@@ -148,9 +148,9 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    users2=test_val.select('user_id').distinct().collect()
-    frac = dict((u.user_id, 0.5) for u in users2)
-    test_val_train = test_val.sampleBy('user_id',fractions = frac, seed=seed)
+    #users2=test_val.select('user_id').distinct().collect()
+    #frac = dict((u.user_id, 0.5) for u in users2)
+    #test_val_train = test_val.sampleBy('user_id',fractions = frac, seed=seed)
 
     '''
     df_count = test_val.groupBy('user_id').count().sort('user_id')
