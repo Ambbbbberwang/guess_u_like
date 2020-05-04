@@ -24,11 +24,11 @@ def evaluation(model,val,metric):
 
 	#####Reshape the dataframe######
 
-	#Need to first reshape the dataframe of val_rec to the same as val
+	#Need to first reshape the dataframe of val_rec to the same as val 
 	#with col names 'user_id', 'book_id', 'rating' | instead of 'recommendations'
-	#before running the following code!!!
-
 	#Please refer to test_dataframe.py for more test code
+
+	
 	val_rec = val_rec.select('user_id','recommendations',posexplode('recommendations')).drop('pos').drop('recommendations')
 	val_rec = val_rec.select('user_id',f.expr('col.book_id'),f.expr('col.rating'))
 	val_rec = val_rec.withColumnRenamed('rating','pred')
