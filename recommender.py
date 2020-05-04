@@ -349,7 +349,7 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
     #                .build()
     
     param_list=[ranks,regParams, maxIters]
-    param_grid=list(iterrools.product(*param_list))
+    param_grid=list(itertools.product(*param_list))
     
     models = np.zeros([len(ranks), len(regParams), len(maxIters)])
     errors = np.zeros([len(ranks), len(regParams), len(maxIters)])
@@ -364,7 +364,7 @@ def recsys (train, val, test, ranks = [10, 15, 20], regParams = [0.005, 0.01, 0.
         print('Try :', params)
         als.setParams(rank=params[0], regParam=params[1], maxIter=params[2])
         cur_model = als.fit(train)
-        predict_df = this_model.transform(val)
+        predict_df = cur_model.transform(val)
         
         cur_model.recommendForAllUsers(500)
         
