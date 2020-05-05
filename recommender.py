@@ -14,7 +14,7 @@ def data_read(spark, path):
     '''
     if path=='interactions':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/goodreads_interactions.csv', header = True, 
-                                    schema = 'user_id INT, book_id STRING, is_read INT, rating FLOAT, is_reviewed INT')
+                                    schema = 'user_id INT, book_id INT, is_read INT, rating FLOAT, is_reviewed INT')
         return df
     elif path=='users':
         df=spark.read.csv('hdfs:/user/bm106/pub/goodreads/user_id_map.csv', header = True, 
@@ -249,6 +249,10 @@ def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
     min_error = float('inf')
     best_rank = -1
     i = 0
+
+    train = train.withColumn('book_id',train['book_id'].cast('int'))
+    test = test.withColumn('book_id',test['book_id'].cast('int'))
+    val = val.withColumn('book_id',val['book_id'].cast('int'))
 
     # For each combo of params, fit the model and create a prediction using val data
     for regParam in regParams:
