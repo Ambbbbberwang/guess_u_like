@@ -61,13 +61,17 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
         #spark_df.show()
  
         # downsampling: sample a percentage of users, and take all of their interactions to make a miniature version of the data.
-        users=spark_df.select('user_id').distinct() 
-        user_samp=users.sample(False, fraction=fraction, seed=seed) #77726
+        #users=spark_df.select('user_id').distinct() 
+        #user_samp=users.sample(False, fraction=fraction, seed=seed) #77726
+        spark_df.createOrReplaceTempView('spark_df')
+        users = spark.sql('SELECT DISTINCT user_id FROM spark_df')
+        splits = users.randomSplit([fraction, 1-fraction], seed=seed)
+        user_samp = splits[0]
+
         #user_samp.show()
-        
 
         # inner join: keep only the randomly sampled users and all their interactions (based on percentage specified)
-        records=spark_df.join(user_samp, ['user_id']) #2387376
+        records=user_samp.join(spark_df, on='user_id', how = 'inner') #2387376
     
 
         # check that this matches the desired percentage
@@ -81,25 +85,6 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
 
     #return records
 
-def rand_samp(spark, df):
-
-    from pyspark import SparkContext
-    from pyspark.sql import SQLContext
-    
-    sc =spark.SparkContext
-
-    users = df.select('user_id').distinct()
-
-    test = SQLContext.createDataFrame(sc.emptyRDD(), df.schema)
-    val = SQLContext.createDataFrame(sc.emptyRDD(), df.schema)  
-
-    for u in users: 
-        temp = df.filter(df['user_id']==u)
-        temp1, temp2 = temp.randomSplit([0.5, 0.5], seed = 42)
-        test = test.union(temp1)
-        val = val.union(temp2)
-
-    return test, val
 
 # Data splitting
 def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parquet', seed=42):
@@ -118,6 +103,15 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     '''
 
     records_pq = spark.read.parquet(records_path)
+    records_pq.createOrReplaceTempView('records_pq')
+    users = spark.sql('SELECT DISTINCT user_id FROM records_pq')
+    train_user, test_val_user = users.randomSplit([0.6, 0.4], seed=seed)
+
+    train=train_user.join(records_pq, on='user_id', how='inner')
+    test_val=test_val_user.join(records_pq, on='user_id', how='inner')
+
+    print(train.select('user_id').distinct().count())
+    print(test_val.select('user_id').distinct().count())
 
     #records_pq = records_pq.withColumn('user_id', records_pq['user_id'].cast('string'))
     
@@ -129,22 +123,35 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #print(users.count()) #7711
 
     # sample the 60% and all interactions to form the training set and remaining set (test and val)
-    users=records_pq.select('user_id').distinct()
-    user_samp=users.sample(False, fraction=0.6, seed=seed) 
-    train=user_samp.join(records_pq, ['user_id'])
-    test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
+    #users=records_pq.select('user_id').distinct()
+    #user_samp=users.sample(False, fraction=0.6, seed=seed) 
+    #train=user_samp.join(records_pq, ['user_id'])
+    #test_val=records_pq.join(user_samp, ['user_id'], 'left_anti') 
     #print(train.select('user_id').distinct().count())  #4591
-    print('Number of validation users',test_val.select('user_id').distinct().count()) #3120
+    #print('Number of validation users',test_val.select('user_id').distinct().count()) #3120
 
     ##check train and test_val don't have overlap users
     train_user1 = train.select('user_id').distinct().collect()
-    val_user1 = test_val.select('user_id').distinct().collect()
-    for u in val_user1:
+    test_val_user1 = test_val.select('user_id').distinct().collect()
+    for u in test_val_user1:
+        #print(u)
         if u in train_user1:
             print('First split: This is a problem!!! User in both train and val:',u)
+        else: 
+            print('Passed: User NOT in overlapping.')
 
+    # test-val set : return half the interactions of each user to the training set
+    frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
+    test_val_kb = test_val.rdd.keyBy(lambda x: x['user_id'])
+    test_val_train=test_val_kb.sampleByKey('user_id', fractions=frac2, seed=seed).map(lambda x: x[1]).toDF(test_val.columns)
+    test_val_train = test_val_train.withColumn('is_read',test_val_train['is_read'].cast('int'))
+    test_val_train = test_val_train.withColumn('is_reviewed',test_val_train['is_reviewed'].cast('int'))
+    test_val_train = test_val_train.withColumn('rating',test_val_train['rating'].cast('float'))    
+    print('schema of test_val_train', test_val_train.printSchema)
+    print('schema of train', train.printSchema)
 
-
+    test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
+    train=train.union(test_val_train) 
 
     # split the remaining set into 50/50 by users' interactions
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
@@ -152,12 +159,8 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #frac = dict((u.user_id, 0.5) for u in users2)
     #test_val_train = test_val.sampleBy('user_id',fractions = frac, seed=seed)
 
-    '''
-    df_count = test_val.groupBy('user_id').count().sort('user_id')
-    
-    frac = dict(df_count.rdd.map(lambda x:(x['user_id'], 0.5)).collect())
-    '''
 
+    '''
     #New method to do the second partition (half interaction of validation set to training set)
     frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
     #print(len(frac))
@@ -175,28 +178,51 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     print('Number of validation users to training set (should equal to all validation users)',test_val_train.select('user_id').distinct().count())
 
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
-    
+    '''
     #print(test_val.groupBy('user_id').count().orderBy('user_id').show())
-    # add training 50% back to train
-    train=train.union(test_val_train) 
+    #add training 50% back to train
+    #train=train.union(test_val_train) 
     #print(train.select('user_id').distinct().count())
     #print(test_val.select('user_id').distinct().count())
 
     #####test all users in test_val are in train#####
     train_user = train.select('user_id').distinct().collect()
-    val_user = test_val.select('user_id').distinct().collect()
-    for u in val_user:
+    test_val_user = test_val.select('user_id').distinct().collect()
+    for u in test_val_user:
         if u not in train_user:
             print('I am not included in train!! (user_id)',u)
+        else:
+            print('Passed: User included in train and test_val.', u)
 
 
    # split the test_val set into test (20%), val (20%) by user
+    '''
     users3=test_val.select('user_id').distinct()
     user_samp=users3.sample(False, fraction=0.5, seed=seed)
     test=user_samp.join(test_val, ['user_id']) 
     val=test_val.join(user_samp, ['user_id'], 'left_anti')
     #print(val.select('user_id').distinct().count())
     #print(test.select('user_id').distinct().count())
+    '''
+
+    test_val.createOrReplaceTempView('test_val')
+    users = spark.sql('SELECT DISTINCT user_id FROM test_val')
+    test_user, val_user = users.randomSplit([0.5, 0.5], seed=seed)
+
+    test=test_user.join(test_val, on='user_id', how='inner')
+    val=val_user.join(test_val, on='user_id', how='inner')
+
+    test_user = test.select('user_id').distinct().collect()
+    val_user = val.select('user_id').distinct().collect()
+    for u in test_user:
+        if u in val_user:
+            print('Oops: I am in both test and val sets.',u)
+        else:
+            print('Passed: User NOT in overlapping.', u)
+
+    print(train.select('user_id').distinct().count())
+    print(val.select('user_id').distinct().count())
+    print(test.select('user_id').distinct().count())
 
     # remove items that are not in training from all three datasets
     # find items in val and/or test that are not in train
@@ -206,15 +232,15 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     #print(items_testval.orderBy('book_id').show()) 
     items_train=train.select('book_id').distinct()
     #print(items_train.orderBy('book_id').show())
-    items_rm=items_testval.join(items_train, ['book_id'], 'leftanti')
+    items_rm=items_testval.join(items_train, on='book_id', how='leftanti')
     #print(items_rm.orderBy('book_id').show())
 
     #print(train.groupBy('book_id').count().orderBy('book_id').show())
     #print(val.groupBy('book_id').count().orderBy('book_id').show())
     #print(test.groupBy('book_id').count().orderBy('book_id').show())
-    train=train.join(items_rm, ['book_id'], 'left_anti')
-    val=val.join(items_rm, ['book_id'], 'left_anti')
-    test=test.join(items_rm, ['book_id'], 'left_anti')
+    train=train.join(items_rm, on='book_id', how='left_anti')
+    val=val.join(items_rm, on='book_id', how='left_anti')
+    test=test.join(items_rm, on='book_id', how='left_anti')
     #print(train.groupBy('book_id').count().orderBy('book_id').show())
     #print(val.groupBy('book_id').count().orderBy('book_id').show())
     #print(test.groupBy('book_id').count().orderBy('book_id').show())
@@ -230,6 +256,7 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     test = test.select("user_id","book_id","rating")
 
     return train, val, test 
+
 
 # Fitting model
 def recsys_fit(train, val, test, ranks=[10], regParams=[0.1]):
