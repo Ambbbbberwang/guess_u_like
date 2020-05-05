@@ -105,6 +105,8 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     records_pq = spark.read.parquet(records_path)
     records_pq.createOrReplaceTempView('records_pq')
     users = spark.sql('SELECT DISTINCT user_id FROM records_pq')
+    print(users.select('user_id').distinct().count())
+
     train_user, test_val_user = users.randomSplit([0.6, 0.4], seed=seed)
 
     train=train_user.join(records_pq, on='user_id', how='inner')
@@ -137,8 +139,10 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
         #print(u)
         if u in train_user1:
             print('First split: This is a problem!!! User in both train and val:',u)
+    """
         else: 
             print('Passed: User NOT in overlapping.')
+    """
 
     # test-val set : return half the interactions of each user to the training set
     frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
@@ -147,8 +151,8 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     test_val_train = test_val_train.withColumn('is_read',test_val_train['is_read'].cast('int'))
     test_val_train = test_val_train.withColumn('is_reviewed',test_val_train['is_reviewed'].cast('int'))
     test_val_train = test_val_train.withColumn('rating',test_val_train['rating'].cast('float'))    
-    print('schema of test_val_train', test_val_train.printSchema)
-    print('schema of train', train.printSchema)
+    #print('schema of test_val_train', test_val_train.printSchema)
+    #print('schema of train', train.printSchema)
 
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
     train=train.union(test_val_train) 
@@ -191,8 +195,10 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     for u in test_val_user:
         if u not in train_user:
             print('I am not included in train!! (user_id)',u)
+    """
         else:
             print('Passed: User included in train and test_val.', u)
+    """
 
 
    # split the test_val set into test (20%), val (20%) by user
@@ -217,8 +223,10 @@ def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parqu
     for u in test_user:
         if u in val_user:
             print('Oops: I am in both test and val sets.',u)
+    """    
         else:
-            print('Passed: User NOT in overlapping.', u)
+            print('Passed: User NOT overlapping.', u)
+    """
 
     print(train.select('user_id').distinct().count())
     print(val.select('user_id').distinct().count())
@@ -489,10 +497,10 @@ def tsneplot(vis_x, vis_y, X.genre):
 #main()
 
 
-#import recommender
+#from recommender import *
 #interactions=recommender.data_read(spark, 'interactions')
 #records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, True, 10)
-## records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int.parquet', 0.01, 42, False, 10)
+## records=recommender.data_prep(spark, interactions, 'hdfs:/user/eac721/onepct_int2.parquet', 0.01, 42, False, 10)
 #train, val, test = recommender.train_val_test_split(spark,records)
 #model = recommender.recsys_fit(train, val, test)
 
