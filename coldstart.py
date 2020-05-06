@@ -13,6 +13,14 @@ to a full collaborative filter model.
 
 ####Load Supplement Book Data####
 
+import gzip
+import json
+import re
+import os
+import sys
+import numpy as np
+import pandas as pd
+
 book_path = 'hdfs:/user/yw2115/goodreads_books.json.gz'
 author_path = 'hdfs:/user/yw2115/goodreads_book_authors.json.gz'
 genre_path = 'hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz'
