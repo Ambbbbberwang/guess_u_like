@@ -15,9 +15,10 @@ from pyspark.mllib.evaluation import RankingMetrics
 
 #----------------Recommender Fit------------------------
 
-def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15], 
+def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15], 
             regParams = [0.01, 0.15], maxIters = [10]):
-    
+ 
+      
     # Record Start Time
     fit_start=timeit.default_timer()
 
@@ -77,7 +78,7 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                         
                 else:
                     # Ranking Metrics with Top 500 recommendations
-                    this_score = Ranking_evaluator(spark,this_model, val, metric)
+                    this_score = Ranking_evaluator(spark, this_model, val, metric)
                     
                     #scores[i][j][p] = this_score
                     #models[i][j][p] = this_model
@@ -113,7 +114,7 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
 #-----------------Recommender Test-----------------------------
 
 
-def RecSys_test(test, best_model):
+def RecSys_test(spark, test, best_model):
     
     # Record Start Time
     test_start=timeit.default_timer()
@@ -135,7 +136,7 @@ def RecSys_test(test, best_model):
     print('MAP of Best Model on Test Set: ', test_MAP,'\n')
     
     # Generate NDCG at 500
-    test_NDCG = Ranking_evaluator(spark, best_model, test, 'NDCG')
+    test_NDCG = Ranking_evaluator(spark,best_model, test, 'NDCG')
     print('NDCG at 500 of Best Model on Test Set: ', test_NDCG,'\n')
 
     # Record End Time
@@ -148,11 +149,11 @@ def RecSys_test(test, best_model):
 #-----------------Ranking Evaluator----------------------------
 
      
-def Ranking_evaluator (spark, model, val, metric_type):
+def Ranking_evaluator (spark,model, val, metric_type):
     
-    
-    val.createOrReplaceTempView('val')
-    val_user = spark.sql('SELECT DISTINCT user_id FROM val')
+    val.createOrReplaceTempView('val')                        
+    val_user = spark.sql('SELECT DISTINCT user_id FROM val')  
+    #val_user = val.select('user_id').distinct()
     val_rec = model.recommendForUserSubset(val_user,500)
     #val_rec.printSchema()
     
