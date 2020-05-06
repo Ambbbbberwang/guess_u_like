@@ -32,9 +32,11 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
     else:
         raise ValueError("Score metric not supported.")
     
-    models = np.zeros([len(ranks), len(regParams), len(maxIters)])
-    scores = np.zeros([len(ranks), len(regParams), len(maxIters)])
+    #models = np.zeros([len(ranks), len(regParams), len(maxIters)])
+    #scores = np.zeros([len(ranks), len(regParams), len(maxIters)])
     
+    #Initialize best model
+    best_model = None
     
     print('Running grid search:')
     for i, rank in enumerate(ranks):
@@ -58,23 +60,25 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                     # Evaluate predict_rating_df using chosen evaluator
                     this_score = eval_RMSE.evaluate(predicted_ratings_df)
                     
-                    scores[i][j][p] = this_score
-                    models[i][j][p] = this_model
+                    #scores[i][j][p] = this_score
+                    #models[i][j][p] = this_model
                     
                     if this_score < best_score:
                         best_score = this_score
                         best_params = [i, j, p]
+                        best_model = this_model
                         
                 else:
                     # Ranking Metrics with Top 500 recommendations
                     this_score = Ranking_evaluator(this_model, val, metric)
                     
-                    scores[i][j][p] = this_score
-                    models[i][j][p] = this_model
+                    #scores[i][j][p] = this_score
+                    #models[i][j][p] = this_model
                     
                     if this_score > best_score:
                         best_score = this_score
                         best_params = [i, j, p]
+                        best_model = this_model
                 
                 
                 # Print current score
@@ -86,7 +90,10 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
           % (ranks[best_params[0]], regParams[best_params[1]], maxIters[best_params[2]]))
     
     print('The best model has %s of value %s:' % (metric, best_score))
-                
+    
+    if best_model == None:
+        print('Returned model is None. Error???')
+        
     return best_model
         
 
