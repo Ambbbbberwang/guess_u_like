@@ -85,7 +85,7 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                 print('For rank %s, regParam %s, maxIter %s : the %s is %s' % (rank, regParam, maxIter, metric ,this_score))
                 
                 
-    best_model = models[best_params[0]][best_params[1]][best_params[2]]
+    #best_model = models[best_params[0]][best_params[1]][best_params[2]]
     print('The best model was trained with rank %s, regParam %s and maxIter %s' 
           % (ranks[best_params[0]], regParams[best_params[1]], maxIters[best_params[2]]))
     
