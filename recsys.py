@@ -77,7 +77,7 @@ def RecSys_fit (train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                         
                 else:
                     # Ranking Metrics with Top 500 recommendations
-                    this_score = Ranking_evaluator(this_model, val, metric)
+                    this_score = Ranking_evaluator(spark,this_model, val, metric)
                     
                     #scores[i][j][p] = this_score
                     #models[i][j][p] = this_model
@@ -127,15 +127,15 @@ def RecSys_test(test, best_model):
     print('RMSE of Best Model on Test Set: ', test_RMSE,'\n')
     
     # Generate Precision at 500
-    test_precision = Ranking_evaluator(best_model, test, 'Precision')
+    test_precision = Ranking_evaluator(spark, best_model, test, 'Precision')
     print('Precition at 500 of Best Model on Test Set: ', test_precision,'\n')
     
     # Generate MAP
-    test_MAP = Ranking_evaluator(best_model, test, 'MAP')
+    test_MAP = Ranking_evaluator(spark, best_model, test, 'MAP')
     print('MAP of Best Model on Test Set: ', test_MAP,'\n')
     
     # Generate NDCG at 500
-    test_NDCG = Ranking_evaluator(best_model, test, 'NDCG')
+    test_NDCG = Ranking_evaluator(spark, best_model, test, 'NDCG')
     print('NDCG at 500 of Best Model on Test Set: ', test_NDCG,'\n')
 
     # Record End Time
