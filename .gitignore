@@ -105,3 +105,4 @@ venv.bak/
 
 # json files
 *.json
+*.json.gz
