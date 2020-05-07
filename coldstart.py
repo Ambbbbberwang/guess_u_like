@@ -85,7 +85,9 @@ def build_attribute_matrix(book_df,author_df,genre_df):
 
 ####Load latent factor for books####
 def load_latent(model):
-    from pyspark.sql.functions import *
+
+    #from pyspark.sql.functions import *
+    from pyspark.sql.functions import selectExpr
     
     latent = model.itemFactors 
     #a DataFrame that stores item factors in two columns: id and features
@@ -148,7 +150,9 @@ def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
     ####
 
 
-# using supplemental data for tsne
+
+#### Using supplemental data for TSNE ####
+
 def build_tsne_matrix(genre_df, latent_matrix):
 
     """
