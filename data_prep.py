@@ -117,11 +117,13 @@ def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parq
     #print(test_val.select('user_id').distinct().count())
 
     # check: train and test_val don't have overlapping users
+    
     train_user1 = train.select('user_id').distinct().collect()
     test_val_user1 = test_val.select('user_id').distinct().collect()
     for u in test_val_user1:
         if u in train_user1:
             print('First split: This is a problem! User in both train and val:',u)
+    
     """
     # within the test-val set, return half the interactions of each user to the training set
     frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
@@ -152,6 +154,7 @@ def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parq
     for u in test_val_user:
         if u not in train_user:
             print('I am not included in train!! (user_id)',u)
+    
 
     # split the remaining test_val set into 50/50 by users to form the separate test and validation sets (20% of overall user-base each)
     # select the unique users
@@ -162,13 +165,14 @@ def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parq
     # build the separate test and val sets
     test=test_user.join(test_val, on='user_id', how='inner')
     val=val_user.join(test_val, on='user_id', how='inner')
-
+    
+    # check: test no overlap in test and val user
     test_user = test.select('user_id').distinct().collect()
     val_user = val.select('user_id').distinct().collect()
     for u in test_user:
         if u in val_user:
             print('Oops: I am in both test and val sets.',u)
-
+    
 
     # remove items that are not in training from all three datasets
     # find items in val and/or test that are not in train
