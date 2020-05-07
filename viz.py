@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Extension 1: 
 # Exploration: use the learned representation to develop a visualization of the items and users, 
 # e.g., using T-SNE or UMAP. The visualization should somehow integrate additional information 
