@@ -17,6 +17,12 @@ book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
 author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
 genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
 
+book_df.createOrReplaceTempView('book_df')
+author_df.createOrReplaceTempView('author_df')
+#genre_df.createOrReplaceTempView('genre_df')
+
+
+
 ####Create Attribute Matrix for Genres####
 '''
 10 categories: 
@@ -46,3 +52,18 @@ for i in range(1,len(new_col)):
     genre_at = genre_at.withColumn(col_name, when(genre_at[col_name].isNotNull(), 1).otherwise(0))
 
 #genre_at.show(10)
+
+####Add Author Rating as Additional Attribute####
+#Select the first author (there are books with more than 1 author, first author is the main author)
+book_df = book_df.select('book_id',f.expr('authors[0]').alias('a'))
+book_df = book_df.select('book_id',f.expr('a.author_id'))
+
+
+
+
+#Join book_df and author_df
+author_at = spark.sql('SELECT book_df.book_id, book_df.author_id,\
+ author_df.average_rating FROM book_df JOIN author_df ON book_df.author_id')
+
+
+
