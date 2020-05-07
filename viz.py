@@ -13,7 +13,7 @@
 
 # python tsneplot()
 
-def tsneplot(items_path='items_matrix.csv', rank = 15, fig_path = 'tsne.png'):
+def tsneplot(items_path='hdfs:/user/eac721/items.csv', rank = 15, fig_path = 'tsne.png'):
 
     """
     items_path='items_matrix.csv' : load the matrix with latent factors, id, genre
@@ -27,6 +27,7 @@ def tsneplot(items_path='items_matrix.csv', rank = 15, fig_path = 'tsne.png'):
     import matplotlib.pyplot as plt
     import seaborn as sns
     from sklearn.manifold import TSNE
+    import pandas as pd
 
     items = pd.read_csv(items_path)
 

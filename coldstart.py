@@ -86,7 +86,7 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
 def load_latent(model):
 
     #from pyspark.sql.functions import *
-    from pyspark.sql.functions import selectExpr
+    #from pyspark.sql import selectExpr
     
     latent = model.itemFactors 
     #a DataFrame that stores item factors in two columns: id and features
@@ -152,7 +152,7 @@ def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
 
 #### Using supplemental data for TSNE ####
 
-def build_tsne_matrix(genre_df, latent_matrix):
+def build_tsne_matrix(spark, latent_matrix, genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz', save_csv='tsne_matrix.csv'):
 
     """
     saves the csv for the tsne plot in viz.py
@@ -167,6 +167,9 @@ def build_tsne_matrix(genre_df, latent_matrix):
 
     from pyspark.sql.types import StringType
     from pyspark.sql.functions import col, greatest, udf, array
+    import pyspark.sql.functions as f
+
+    genre_df =spark.read.json(genre_df)
 
     genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
         f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
@@ -192,5 +195,5 @@ def build_tsne_matrix(genre_df, latent_matrix):
     tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
 
     # save to csv for py script
-    tsne_matrix.to_csv('tsne_matrix.csv')
+    tsne_matrix.write.csv(save_csv)
 
