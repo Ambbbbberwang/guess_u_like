@@ -83,7 +83,7 @@ def data_prep(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parquet', f
 
 
 # Data splitting
-def train_val_test_split(spark, records_path='hdfs:/user/eac721/onepct_int.parquet', seed=42):
+def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parquet', seed=42):
 
     '''
     # This function takes the following splitting procedure: 
