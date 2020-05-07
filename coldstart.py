@@ -82,4 +82,28 @@ def build_attribute_matrix(book_df,author_df,genre_df):
     #N = 11 is number of attribute features of the books
     return book_at
 
+####Load latent factor for books####
+def load_latent(model):
+    from pyspark.sql.functions import *
+    latent = model.itemFactors 
+    #a DataFrame that stores item factors in two columns: id and features
+    size = model.rank
+    col = ['id']
+    for x in range(size):
+        col.append('features[' + str(x) + ']')
+
+    #Convert to latent matrix with first col as "book_id" the rest col are latent features
+    latent = latent.selectExpr(col)
+    #rename cols
+    new_col = ['book_id']
+    for i in range(size):
+        new_col.append('f'+str(i))
+    #return latent matrix
+    latent_matrix = latent.toDF(*new_col)
+
+    return latent_matrix
+
+
+
+
 
