@@ -191,10 +191,6 @@ def build_tsne_matrix(genre_df, latent_matrix):
 
     tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
 
-    # adding save for tsne
+    # save to csv for py script
     tsne_matrix.to_csv('tsne_matrix.csv')
-
-    
-
-
 

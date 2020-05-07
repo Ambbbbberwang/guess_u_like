@@ -11,26 +11,30 @@
 # https://towardsdatascience.com/an-introduction-to-t-sne-with-python-example-5a3a293108d1
 # https://github.com/DmitryUlyanov/Multicore-TSNE
 
-# pyspark
-
+# python tsneplot()
 
 def tsneplot(items_path='items_matrix.csv', rank = 15, fig_path = 'tsne.png'):
+
+    """
+    items_path='items_matrix.csv' : load the matrix with latent factors, id, genre
+    rank: how many features are there?
+    fig_path: where to save the plot
+
+    return None, saves plot
+
+    """
 
     import matplotlib.pyplot as plt
     import seaborn as sns
     from sklearn.manifold import TSNE
 
     items = pd.read_csv(items_path)
-    info = pd.read_csv(info_path)
 
     tsne = TSNE(n_components=2, random_state=seed)
-
     tsne_obj= tsne.fit_transform(items.iloc[:,1:rank])
+    tsne_df = pd.DataFrame({'X':tsne_obj[:,0],'Y':tsne_obj[:,1],'top-genre':items.loc[:,'']})
 
-    tsne_df = pd.DataFrame({'X':tsne_obj[:,0],'Y':tsne_obj[:,1]})
-        #,'top-genre':items.loc[:,'']})
-
-    sns_plot = sns.scatterplot(x="X", y="Y", data=tsne_df)
-        #hue="top-genre", palette=sns.color_palette("muted"),legend='full', data=tsne_df)
-
+    sns_plot = sns.scatterplot(x="X", y="Y", hue="top-genre", palette=sns.color_palette("muted"),legend='full', data=tsne_df)
     sns_plot.savefig('tsne_test.png')
+
+tsneplot(fig_path = 'tsne.png')
