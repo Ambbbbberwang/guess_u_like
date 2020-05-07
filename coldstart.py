@@ -13,38 +13,22 @@ to a full collaborative filter model.
 
 ####Load Supplement Book Data####
 
-import gzip
-import json
-import re
-import os
-import sys
-import numpy as np
-import pandas as pd
+book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
+author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
+genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
 
-book_path = 'hdfs:/user/yw2115/goodreads_books.json.gz'
-author_path = 'hdfs:/user/yw2115/goodreads_book_authors.json.gz'
-genre_path = 'hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz'
+####Create Attribute Matrix for Genres####
+'''
+10 categories: 
+children| comics, graphic| fantasy, paranormal| fiction| history, historical fiction, biography,
+mystery, thriller, crime| non-fiction| poetry| romance| young-adult
 
-def load_data(file_name, head = 500):
-    count = 0
-    data = []
-    with gzip.open(file_name) as fin:
-        for l in fin:
-            d = json.loads(l)
-            count += 1
-            data.append(d)
-            
-            # break if reaches the 100th line
-            if (head is not None) and (count > head):
-                break
-    #return spark dataframe
-    data_df = spark.createDataFrame(data)
+'''
+import pyspark.sql.functions as f
 
-    return data_df
-
-book_df = load_data(book_path, head = 500)
-author_df = load_data(author_path, head = 500)
-genre_df = load_data(genre_path, head = 500)
-
+genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
+    f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
+    f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
+    f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
 
 
