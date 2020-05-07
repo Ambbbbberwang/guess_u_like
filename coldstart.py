@@ -107,13 +107,13 @@ def load_latent(model):
     return latent_matrix
 
 
-# for tsne
-
+# using supplemental data for tsne
 
 def build_tsne_matrix(genre_df, latent_matrix):
 
     """
     saves the csv for the tsne plot in viz.py
+    # reference: https://stackoverflow.com/questions/46179453/how-to-compute-maximum-per-row-and-return-a-colum-of-max-value-and-another-colu
 
     genre_df: hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz, downloaded from goodreads online
     latent_matrix: output from load_latent(model)
@@ -122,22 +122,36 @@ def build_tsne_matrix(genre_df, latent_matrix):
     saves: data structure with bookid, lf's from the model, and genre matched
     """
 
-    import pyspark.sql.functions as f
-    from pyspark.sql.functions import when
+    from pyspark.sql.types import StringType
+    from pyspark.sql.functions import col, greatest, udf, array
 
     genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
         f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
         f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
         f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
+    #genre_at = genre_at.toDF()
+    #genre_only = genre_at.drop('book_id')
 
-    for i in genre_at:
-    # https://stackoverflow.com/questions/46179453/how-to-compute-maximum-per-row-and-return-a-colum-of-max-value-and-another-colu
+    df1 = genre_at.withColumn("maxValue", greatest(*[col(x) for x in genre_at.columns[1:]]))
 
+    col_arr = df1.columns
 
-    tsne_matrix=latent_matrix.join(genre_at, on='book_id', how='inner')
+    def modify_values(r):
+        for i in range(len(r[:-1])):
+            if r[i]==r[-1]:
+                return col_arr[i]
+
+    modify_values_udf = udf(modify_values, StringType())
+
+    df1 = df1.withColumn("maxColumn", modify_values_udf(array(df1.columns)))
+    book_genre = df1.select('book_id', 'maxColumn')
+
+    tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
 
     # adding save for tsne
     tsne_matrix.to_csv('tsne_matrix.csv')
+
+    
 
 
 
