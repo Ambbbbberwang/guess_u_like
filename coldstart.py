@@ -25,6 +25,7 @@ mystery, thriller, crime| non-fiction| poetry| romance| young-adult
 
 '''
 import pyspark.sql.functions as f
+from pyspark.sql.functions import when
 
 genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
     f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
@@ -32,3 +33,16 @@ genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`c
     f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
 
 
+#change col names
+new_col = ['book_id','g1','g2','g3','g4','g5','g6','g7','g8','g9','g10']
+genre_at = genre_at.toDF(*new_col)
+
+#0/1 Encoding
+#change Null value to 0 (meaning the book is not in this genre) 
+# and other int to 1 (meaning the book in this genre)
+
+for i in range(1,len(new_col)):
+    col_name = new_col[i]
+    genre_at = genre_at.withColumn(col_name, when(genre_at[col_name].isNotNull(), 1).otherwise(0))
+
+#genre_at.show(10)
