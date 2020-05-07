@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 
 Extension 2: Cold-start
@@ -18,8 +20,6 @@ author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
 genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
 
 
-
-
 def build_attribute_matrix(book_df,author_df,genre_df):
 
     ####Create Attribute Matrix for Genres####
@@ -36,7 +36,6 @@ def build_attribute_matrix(book_df,author_df,genre_df):
         f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
         f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
         f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
-
 
     #change col names
     new_col = ['book_id','g1','g2','g3','g4','g5','g6','g7','g8','g9','g10']
@@ -82,9 +81,12 @@ def build_attribute_matrix(book_df,author_df,genre_df):
     #N = 11 is number of attribute features of the books
     return book_at
 
+
+
 ####Load latent factor for books####
 def load_latent(model):
     from pyspark.sql.functions import *
+    
     latent = model.itemFactors 
     #a DataFrame that stores item factors in two columns: id and features
     size = model.rank
@@ -101,9 +103,35 @@ def load_latent(model):
     #return latent matrix
     latent_matrix = latent.toDF(*new_col)
 
+
     return latent_matrix
 
 
+# for tsne
+def build_tsne_matrix(genre_df, latent_matrix):
+
+    """
+    saves the csv for the tsne plot in viz.py
+
+    genre_df: hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz, downloaded from goodreads online
+    latent_matrix: output from load_latent(model)
+
+    return: None
+    saves: data structure with bookid, lf's from the model, and genre matched
+    """
+
+    import pyspark.sql.functions as f
+    from pyspark.sql.functions import when
+
+    genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
+        f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
+        f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
+        f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
+
+    tsne_matrix=latent_matrix.join(genre_at, on='book_id', how='inner')
+
+    # adding save for tsne
+    tsne_matrix.to_csv('tsne_matrix.csv')
 
 
 
