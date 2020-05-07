@@ -107,6 +107,56 @@ def load_latent(model):
     return latent_matrix
 
 
+####Attribute-to-Latent_Factor Mapping####
+
+###k-Nearest-Neighbors Mapping
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+def get_neighbors(item_row,attribute_matrix,k):
+    cs = cosine_similarity(item_row,attribute_matrix)
+    
+
+
+
+
+
+
+    idx = np.argsort(cs)[::-1]
+    k_idx = idx[:k]
+    score = []
+    for i in k_idx:
+        score.append(cs[i])
+
+
+
+
+    return score,k_idx
+
+
+
+def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
+    '''
+    input: 
+    attribute_matrix of size (I*N)
+    latent_matrix of size (I*k)
+    I: number of total items (books) 
+    N: number of observable content features of a book
+    k: rank in the model, also number of latent factors
+    '''
+
+    ####
+
+
+
+
+
+
+
+
+
+
+
+
 # for tsne
 
 
