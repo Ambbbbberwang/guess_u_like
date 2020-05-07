@@ -108,6 +108,8 @@ def load_latent(model):
 
 
 # for tsne
+
+
 def build_tsne_matrix(genre_df, latent_matrix):
 
     """
@@ -127,6 +129,10 @@ def build_tsne_matrix(genre_df, latent_matrix):
         f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
         f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
         f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
+
+    for i in genre_at:
+    # https://stackoverflow.com/questions/46179453/how-to-compute-maximum-per-row-and-return-a-colum-of-max-value-and-another-colu
+
 
     tsne_matrix=latent_matrix.join(genre_at, on='book_id', how='inner')
 
