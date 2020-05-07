@@ -18,7 +18,7 @@ author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
 genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
 
 
-#genre_df.createOrReplaceTempView('genre_df')
+
 
 
 
@@ -67,5 +67,14 @@ author_at = spark.sql('SELECT book_df.book_id, book_df.author_id,\
  author_df.average_rating FROM book_df JOIN author_df ON \
  book_df.author_id=author_df.author_id')
 #author_at.show(10)
+
+####Join The Two Matrix to Get Book Attribute Matrix####
+genre_at.createOrReplaceTempView('genre_at')
+author_at.createOrReplaceTempView('author_at')
+
+book_at = spark.sql('SELECT genre_at.book_id, genre_at.g1, genre_at.g2,\
+ genre_at.g3, genre_at.g4, genre_at.g5, genre_at.g6, genre_at.g7, genre_at.g8, \
+ genre_at.g9, genre_at.g10, author_at.average_rating AS author_rating \
+ FROM genre_at JOIN author_at ON genre_at.book_id=author_at.book_id')
 
 
