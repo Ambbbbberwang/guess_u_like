@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+#Remove modules to Top, shared for all functions
+import pyspark.sql.functions as f
+from pyspark.sql import Window
+
 #read in data
 def data_read(spark, path):
     '''
@@ -41,10 +45,7 @@ def data_subsample(spark, spark_df, pq_path='hdfs:/user/eac721/onepct_int.parque
 
     if savepq == True:
 
-        # Recommender constraint: remove the users with only a low number of interactions
-
-        import pyspark.sql.functions as f
-        from pyspark.sql import Window
+        # Recommender constraint: remove the users with only a low number of interaction
 
         w= Window.partitionBy('user_id')
         # Add a column with the number of interactions for all users 
@@ -121,7 +122,7 @@ def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parq
     for u in test_val_user1:
         if u in train_user1:
             print('First split: This is a problem! User in both train and val:',u)
-
+    """
     # within the test-val set, return half the interactions of each user to the training set
     frac2 = test_val.rdd.map(lambda x: x['user_id']).distinct().map(lambda x: (x,0.5)).collectAsMap()
     test_val_kb = test_val.rdd.keyBy(lambda x: x['user_id'])
@@ -136,6 +137,14 @@ def train_val_test_split(spark, records_path='hdfs:/user/yw2115/onepct_book.parq
     # build the true test-val set and return the rest to the training set (half of each users interactions)
     test_val=test_val.join(test_val_train, ['user_id', 'book_id'], 'left_anti') 
     train=train.union(test_val_train) 
+    """
+    
+    # new way to derive test_val_train
+    window = Window.partitionBy('user_id').orderBy('book_id')
+    test_val_indexed=test_val.select('user_id','book_id','is_read','rating','is_reviewed',f.row_number().over(window).alias('row_number'))
+    test_val_train = test_val_indexed.filter(test_val_indexed.row_number % 2 == 0).drop('row_number')
+    test_val = test_val_indexed.filter(test_val_indexed.row_number % 2 == 1).drop('row_number')
+    train = train.union(test_val_train)
 
     # check: test all users in test_val are in train 
     train_user = train.select('user_id').distinct().collect()
