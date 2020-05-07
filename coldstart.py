@@ -15,12 +15,7 @@ to a full collaborative filter model.
 
 ####Load Supplement Book Data####
 
-book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
-author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
-genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
-
-
-def build_attribute_matrix(book_df,author_df,genre_df):
+def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz'):
 
     ####Create Attribute Matrix for Genres####
     '''
@@ -31,6 +26,10 @@ def build_attribute_matrix(book_df,author_df,genre_df):
     '''
     import pyspark.sql.functions as f
     from pyspark.sql.functions import when
+
+    book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
+    author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
+    genre_df =spark.read.json('hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
 
     genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
         f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
