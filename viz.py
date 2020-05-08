@@ -13,8 +13,7 @@
 
 # python tsneplot()
 
-def tsneplot(items_path='tsne_matrix.csv', rank = 15, fig_path = 'tsne.png'):
-
+def tsneplot(seed = 42, fig_path = 'tsne.png'):
     """
     items_path='items_matrix.csv' : load the matrix with latent factors, id, genre
     rank: how many features are there?
@@ -26,18 +25,33 @@ def tsneplot(items_path='tsne_matrix.csv', rank = 15, fig_path = 'tsne.png'):
     import matplotlib
     matplotlib.use('Agg')
 
+    import matplotlib
+    matplotlib.use('Agg')
+
     import matplotlib.pyplot as plt
     import seaborn as sns
     from sklearn.manifold import TSNE
     import pandas as pd
+    from glob import glob
 
-    items = pd.read_csv(items_path)
+    filename = glob("tsne_matrix.csv/*.csv")[0]
+    items = pd.read_csv(filename, engine='python', header=None)
+    print('read data.')
+    print(items.head())
+    num_features = items.shape[1]
+
+    # sample data
+    items = items.sample(n=1000, random_state=seed, replace=False)
+    print('sampled data.')
 
     tsne = TSNE(n_components=2, random_state=seed)
-    tsne_obj= tsne.fit_transform(items.iloc[:,1:rank])
-    tsne_df = pd.DataFrame({'X':tsne_obj[:,0],'Y':tsne_obj[:,1],'top-genre':items.loc[:,'']})
+    tsne_obj= tsne.fit_transform(items.iloc[:,1:num_features-1])
+    tsne_df = pd.DataFrame({'X':tsne_obj[:,0],'Y':tsne_obj[:,1],'top-genre':items.iloc[:,-1]})
 
+    print(tsne_df)
+    
+    print('plotting data.')
     sns_plot = sns.scatterplot(x="X", y="Y", hue="top-genre", palette=sns.color_palette("muted"),legend='full', data=tsne_df)
-    sns_plot.savefig('tsne_test.png')
+    sns_plot.figure.savefig('tsne_test.png')
 
 tsneplot(fig_path = 'tsne.png')

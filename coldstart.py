@@ -195,5 +195,5 @@ def build_tsne_matrix(spark, latent_matrix, genre_df='hdfs:/user/yw2115/gooreads
     tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
 
     # save to csv for py script
-    tsne_matrix.write.csv(save_csv)
+    tsne_matrix.coalesce(1).write.csv(save_csv)
 
