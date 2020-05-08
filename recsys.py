@@ -5,8 +5,6 @@
 from pyspark.ml.recommendation import ALS #, Rating
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.sql import functions as f
-#from pyspark.sql.types import DoubleType
-#import numpy as np
 import timeit
 from pyspark.sql import Window
 from pyspark.mllib.evaluation import RankingMetrics
@@ -45,6 +43,9 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
     
     #Initialize best model
     best_model = None
+
+    #Used for print out 2 unselected ranking metrics for reference
+    other2 = None
     
     print('Running grid search:')
     for i, rank in enumerate(ranks):
@@ -60,13 +61,13 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                 if metric == 'RMSE':   # No need of Top 500
                     
                     # Remove NaN values from prediction  --  Necessary ???
-                    predicted_ratings_df = predict_df.filter(predict_df.prediction != float('nan'))
+                    #predicted_ratings_df = predict_df.filter(predict_df.prediction != float('nan'))
                     
                     # Round floats to whole numbers  --  TA said no need to round to integer
                     #predicted_ratings_df = predicted_ratings_df.withColumn("prediction", f.abs(f.round(predicted_ratings_df["prediction"],0)))
                           
                     # Evaluate predict_rating_df using chosen evaluator
-                    this_score = eval_RMSE.evaluate(predicted_ratings_df)
+                    this_score = eval_RMSE.evaluate(predict_df)
                     
                     #scores[i][j][p] = this_score
                     #models[i][j][p] = this_model
@@ -78,7 +79,7 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                         
                 else:
                     # Ranking Metrics with Top 500 recommendations
-                    this_score = Ranking_evaluator(spark, this_model, val, metric)
+                    this_score, other2 = Ranking_evaluator(spark, this_model, val, metric)
                     
                     #scores[i][j][p] = this_score
                     #models[i][j][p] = this_model
@@ -92,7 +93,12 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
                 # Print current score
                 print('For rank %s, regParam %s, maxIter %s : the %s is %s' % (rank, regParam, maxIter, metric ,this_score))
                 
-                
+                # Print 2 reference ranking scores
+                if other2 != None:
+                    print('Other Reference Ranking Metrics in this setting:\n')
+                    for key, value in other2.items():
+                        print(key,': ',value)                
+
     #best_model = models[best_params[0]][best_params[1]][best_params[2]]
     print('The best model was trained with rank %s, regParam %s and maxIter %s' 
           % (ranks[best_params[0]], regParams[best_params[1]], maxIters[best_params[2]]))
@@ -128,15 +134,15 @@ def RecSys_test(spark, test, best_model):
     print('RMSE of Best Model on Test Set: ', test_RMSE,'\n')
     
     # Generate Precision at 500
-    test_precision = Ranking_evaluator(spark, best_model, test, 'Precision')
-    print('Precition at 500 of Best Model on Test Set: ', test_precision,'\n')
+    test_precision,_ = Ranking_evaluator(spark, best_model, test, 'Precision')
+    print('Precition at 500 of Best Model on Test Set: ', test_precision ,'\n')
     
     # Generate MAP
-    test_MAP = Ranking_evaluator(spark, best_model, test, 'MAP')
+    test_MAP,_ = Ranking_evaluator(spark, best_model, test, 'MAP')
     print('MAP of Best Model on Test Set: ', test_MAP,'\n')
     
     # Generate NDCG at 500
-    test_NDCG = Ranking_evaluator(spark,best_model, test, 'NDCG')
+    test_NDCG,_ = Ranking_evaluator(spark,best_model, test, 'NDCG')
     print('NDCG at 500 of Best Model on Test Set: ', test_NDCG,'\n')
 
     # Record End Time
@@ -173,18 +179,15 @@ def Ranking_evaluator (spark,model, val, metric_type):
     
     metrics = RankingMetrics(ranks)
     
-    #print(metrics.meanAveragePrecision)
-    #print(metrics.precisionAt(500))
-    #print(metrics.ndcgAt(500))
+    MAP = metrics.meanAveragePrecision
+    Precision = metrics.precisionAt(500)
+    NDCG = metrics.ndcgAt(500)
     
     if metric_type == 'Precision':
-        return metrics.precisionAt(500)
+        return Precision, {'MAP': MAP,'NDCG': NDCG}
     elif metric_type == 'MAP':
-        return metrics.meanAveragePrecision
+        return MAP, {'Precision': Precision,'NDCG': NDCG}
     elif metric_type == 'NDCG':
-        return metrics.ndcgAt(500)
+        return NDCG, {'MAP': MAP, 'Precision': Precision}
     else:
         return None
-
-
-
