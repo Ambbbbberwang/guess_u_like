@@ -47,9 +47,16 @@ id|  a | b|
 ...
 
 
-
-
-
-
 '''
+
+###test for cosine similarity calculation of two spark dataframe###
+from pyspark.sql import functions as F
+df1 = sqlContext.createDataFrame([(1,2,3),(2,-1,2)],('CustomerID','CustomerValue'))
+df2 = sqlContext.createDataFrame([(3,[0,2,3])],('id','features'))
+
+
+kvs = F.explode(F.array([F.struct(F.lit('features').alias('key'), F.column('features').alias('value'))])).alias('kvs')
+
+dft1 = (df1.select(['id', kvs]).select('id', F.column('kvs.name').alias('column_name'), F.column('kvs.value').alias('column_value')))
+
 
