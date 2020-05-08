@@ -13,7 +13,7 @@
 
 # python tsneplot()
 
-def tsneplot(seed = 42, fig_path = 'tsne.png'):
+def tsneplot(sample = 10000, seed = 42, fig_path = 'tsne.png'):
     """
     items_path='items_matrix.csv' : load the matrix with latent factors, id, genre
     rank: how many features are there?
@@ -39,7 +39,7 @@ def tsneplot(seed = 42, fig_path = 'tsne.png'):
     num_features = items.shape[1]
 
     # sample data
-    items = items.sample(n=1000, random_state=seed, replace=False)
+    items = items.sample(n=sample, random_state=seed, replace=False)
     print('sampled data.')
 
     tsne = TSNE(n_components=2, random_state=seed)
