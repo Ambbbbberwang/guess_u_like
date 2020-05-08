@@ -23,6 +23,8 @@ def tsneplot(items_path='tsne_matrix.csv', rank = 15, fig_path = 'tsne.png'):
     return None, saves plot
 
     """
+    import matplotlib
+    matplotlib.use('Agg')
 
     import matplotlib.pyplot as plt
     import seaborn as sns
