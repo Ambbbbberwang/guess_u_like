@@ -26,6 +26,7 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
     '''
     import pyspark.sql.functions as f
     from pyspark.sql.functions import when
+    from pyspark.ml.feature import VectorAssembler
 
     book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
     author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
@@ -39,6 +40,7 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
     #change col names
     new_col = ['book_id','g1','g2','g3','g4','g5','g6','g7','g8','g9','g10']
     genre_at = genre_at.toDF(*new_col)
+    #genre_at.show(3)
 
     #0/1 Encoding
     #change Null value to 0 (meaning the book is not in this genre) 
@@ -75,9 +77,19 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
      genre_at.g9, genre_at.g10, author_at.average_rating AS author_rating \
      FROM genre_at JOIN author_at ON genre_at.book_id=author_at.book_id')
 
+    book_at = book_at.withColumn('author_rating',book_at['author_rating'].cast('float'))
+
     #return the I*N attribute matrix for book
     #I is number of items (books)
     #N = 11 is number of attribute features of the books
+
+    #add a features col
+    vecAssembler = VectorAssembler(inputCols=['g1','g2','g3','g4','g5','g6','g7','g8','g9','g10','author_rating'], outputCol="features")
+    book_at = vecAssembler.transform(book_at)
+    #note here 'features' is a SparseVector type due to spark memory default
+
+    #book_at.show(3)
+
     return book_at
 
 
@@ -110,11 +122,30 @@ def load_latent(model):
 
 
 ####Attribute-to-Latent_Factor Mapping####
+###k-means clustering###
+#Since the data is too big to do knn, first cluster them
+from pyspark.ml.clustering import KMeans
+kmeans = KMeans(k=1000, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
+model = kmeans.fit(book_at.select('features'))
+#model.save('k-means_model')
+
+#add the cluster col to original attribute matrix
+transformed = model.transform(book_at)
+transformed.withColumnRenamed("prediction","cluster")
+#transormed.show(3)
+
+
 
 ###k-Nearest-Neighbors Mapping
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-def get_neighbors(item_row,attribute_matrix,k):
+def get_neighbors(book_id,book_at,k):
+    #get feature and cluster number for the book
+    feature = book_at.where(book_at.book_id == book_id).select('features')
+    cluster_id = book_at.where(book_at.book_id == book_id).select('cluster')
+    sub_data = book_at.where(book_at.cluster == cluster_id)
+    sub_data_features = sub_data.select('features')
+
     cs = cosine_similarity(item_row,attribute_matrix)
     
 
