@@ -14,7 +14,6 @@
 # python tsneplot()
 
 def tsneplot(seed = 42, fig_path = 'tsne.png'):
-
     """
     items_path='items_matrix.csv' : load the matrix with latent factors, id, genre
     rank: how many features are there?
