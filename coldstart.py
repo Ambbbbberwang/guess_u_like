@@ -122,29 +122,67 @@ def load_latent(model):
 
 
 ####Attribute-to-Latent_Factor Mapping####
-###k-means clustering###
-#Since the data is too big to do knn, first cluster them
-from pyspark.ml.clustering import KMeans
-kmeans = KMeans(k=1000, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
-model = kmeans.fit(book_at.select('features'))
-#model.save('k-means_model')
+def k_means_transform(book_at,k=1000)
+    '''
+    input: attribute feature matrix of all books
+    output: transformed matrix including cluster assignment
+    This function is used to cluster all books for faster calculation for knn later
+    '''
 
-#add the cluster col to original attribute matrix
-transformed = model.transform(book_at)
-transformed.withColumnRenamed("prediction","cluster")
-#transormed.show(3)
+
+
+    ###k-means clustering###
+    #Since the data is too big to do knn, first cluster them
+    from pyspark.ml.clustering import KMeans
+    kmeans = KMeans(k=k, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
+    model = kmeans.fit(book_at.select('features'))
+    #model.save('k-means_model')
+
+    #add the cluster col to original attribute matrix
+    transformed = model.transform(book_at)
+    transformed = transformed.withColumnRenamed("prediction","cluster")
+    #transormed.show(3)
+    return transformed
+
+####Compute cosine similarity between two Spark dataframes####
+def cosine_similarity(df1,df2):
+    '''
+    input: two spark dataframes of cols ['book_id','features']
+
+    '''
+
+    
+
 
 
 
 ###k-Nearest-Neighbors Mapping
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+
 def get_neighbors(book_id,book_at,k):
+    '''
+    input: book_id for the cold start book
+    book_at: should be the transformed attribute matrix with cluster assignment (for faster calculation)
+    k: number of nearest neighbors
+    '''
+    from pyspark.sql import functions as f
+
+
     #get feature and cluster number for the book
-    feature = book_at.where(book_at.book_id == book_id).select('features')
-    cluster_id = book_at.where(book_at.book_id == book_id).select('cluster')
+    feature = book_at.where(book_at.book_id == book_id).select('features').collect()[0].features
+    cluster_id = book_at.where(book_at.book_id == book_id).select('cluster').collect()[0].cluster
+    
+    #get the sub_data of the same cluster as the inquire book_id
     sub_data = book_at.where(book_at.cluster == cluster_id)
     sub_data_features = sub_data.select('features')
+
+
+
+
+
+
+
 
     cs = cosine_similarity(item_row,attribute_matrix)
     
