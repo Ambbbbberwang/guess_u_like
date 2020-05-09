@@ -139,7 +139,7 @@ def k_means_transform(book_at,k=1000,load_model = True):
         #model.save('k-means_model')
     else:
         from pyspark.ml.clustering import KMeansModel
-        model = KMeansModel.load(save_path_to_model)
+        model = KMeansModel.load('hdfs:/user/yw2115/k-means_model')
 
     #add the cluster col to original attribute matrix
     transformed = model.transform(book_at)
@@ -147,13 +147,9 @@ def k_means_transform(book_at,k=1000,load_model = True):
     #transormed.show(3)
     return transformed
 
-####Compute cosine similarity between two Spark dataframes####
-def cosine_similarity(df1,df2):
-    '''
-    input: two spark dataframes of cols ['book_id','features']
-
-    '''
-
+####Compute cosine similarity between two columns####
+def cos_sim(f1,f2):
+    return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
 
 
 
@@ -170,22 +166,43 @@ def get_neighbors(book_id,book_at,k):
     k: number of nearest neighbors
     '''
     from pyspark.sql import functions as f
-
-
-    #get feature and cluster number for the book
-    feature = book_at.where(book_at.book_id == book_id).select('features').collect()[0].features
-    cluster_id = book_at.where(book_at.book_id == book_id).select('cluster').collect()[0].cluster
+    from pyspark.sql.types import *
     
-    #get the sub_data of the same cluster as the inquire book_id
-    sub_data = book_at.where(book_at.cluster == cluster_id)
 
-    sub_data_features = sub_data.select('features')
-
-
-
-
+    #load the dataframe with a single row of target book
+    target_book = book_at.where(book_at.book_id == book_id)
+    #target_book.show()
+    target_book.createOrReplaceTempView('target_book')
+    book_at.createOrReplaceTempView('book_at')
 
 
+
+
+    
+    ###get the sub_data of the same cluster as the target###
+    sub_data = spark.sql('SELECT target_book.book_id AS target_id, target_book.features AS features1, target_book.cluster, \
+        book_at.book_id, book_at.features AS features2 FROM target_book JOIN book_at ON \
+        target_book.cluster = book_at.cluster')
+    #sub_data.show(10)
+    #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
+
+    ###calculate the cosine similarity###
+
+    cosine_similarity = f.udf(cos_sim, FloatType())
+
+    sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
+
+
+
+
+
+
+
+
+
+
+
+'''
 
 
     cs = cosine_similarity(item_row,attribute_matrix)
@@ -211,7 +228,7 @@ def get_neighbors(book_id,book_at,k):
     return score,k_idx
 
 
-
+'''
 def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
     '''
     input: 
