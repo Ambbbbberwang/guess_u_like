@@ -13,7 +13,7 @@
 # run using: 
 # python tsneplot()
 
-def tsneplot(points = 10000, seed = 42, fig_path = './visualization/tsne.png'):
+def tsneplot(points = 10000, seed = 42, fig_path = './vizualization/tsne.png'):
     """
     points: number of points to visualizse
     seed = random_state
@@ -33,7 +33,8 @@ def tsneplot(points = 10000, seed = 42, fig_path = './visualization/tsne.png'):
     from sklearn.manifold import TSNE
     from sklearn import preprocessing
 
-    filename = glob("/visualization/*.csv")[0]
+    filename = glob("~/vizualization/*.csv")
+    print(filename)
     items = pd.read_csv(filename, engine='python', header=None)
     size=items.shape[0]
     #print('read data.')
