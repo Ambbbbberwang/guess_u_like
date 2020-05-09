@@ -147,8 +147,9 @@ def k_means_transform(book_at,k=1000,load_model = True):
     #transormed.show(3)
     return transformed
 
-####Compute cosine similarity between two Spark dataframes####
-
+####Compute cosine similarity between two columns####
+def cos_sim(f1,f2):
+    return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
 
 
 
@@ -157,14 +158,13 @@ def k_means_transform(book_at,k=1000,load_model = True):
 ###k-Nearest-Neighbors Mapping
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-'''
-def get_neighbors(book_id,book_at,k):
 
-    
+def get_neighbors(book_id,book_at,k):
+    '''
     input: book_id for the cold start book
     book_at: should be the transformed attribute matrix with cluster assignment (for faster calculation)
     k: number of nearest neighbors
-    
+    '''
     from pyspark.sql import functions as f
     from pyspark.sql.types import *
     
@@ -187,31 +187,17 @@ def get_neighbors(book_id,book_at,k):
     #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
     ###calculate the cosine similarity###
-    feature_comb = sub_data.rdd.map(lambda r: (r.features1,r.features2)).collect()
 
     cosine_similarity = f.udf(cos_sim, FloatType())
 
-    sub_data.withColumn('cosine_similarity', f.udf(cos_sim, FloatType())(col("myCol"), array([lit(v) for v in static_array])))
-
-    sub_data.withColumn('cosine_similarity',cosine_similarity(feature_comb))
-
-    #cosine_df = sub_data.select(f.sum(sub_data['features1']*sub_data['features2']).alias('dot'),\
-     #   f.sqrt(f.sum(sub_data['features1']**2)).alias('norm1'), \
-      #  f.sqrt(f.sum(sub_data['features2'] **2)).alias('norm2'))
-
-      #sub_data.select(cosine_similarity(feature_comb).alias('cos'))
-
-
-
-    #sub_data.columnSimilarities()
-
-'''
+    sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
 
 
 
 
-def cos_sim(feature_comb):
-    return [float(i.dot(j) / (i.norm(2) * j.norm(2))) for i, j in feature_comb]
+
+
+
 
 
 
