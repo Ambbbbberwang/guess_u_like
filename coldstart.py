@@ -122,21 +122,24 @@ def load_latent(model):
 
 
 ####Attribute-to-Latent_Factor Mapping####
-def k_means_transform(book_at,k=1000)
+def k_means_transform(book_at,k=1000,load_model = True):
     '''
     input: attribute feature matrix of all books
     output: transformed matrix including cluster assignment
     This function is used to cluster all books for faster calculation for knn later
     '''
 
+    if load_model == False:
 
-
-    ###k-means clustering###
-    #Since the data is too big to do knn, first cluster them
-    from pyspark.ml.clustering import KMeans
-    kmeans = KMeans(k=k, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
-    model = kmeans.fit(book_at.select('features'))
-    #model.save('k-means_model')
+        ###k-means clustering###
+        #Since the data is too big to do knn, first cluster them
+        from pyspark.ml.clustering import KMeans
+        kmeans = KMeans(k=k, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
+        model = kmeans.fit(book_at.select('features'))
+        #model.save('k-means_model')
+    else:
+        from pyspark.ml.clustering import KMeansModel
+        model = KMeansModel.load(save_path_to_model)
 
     #add the cluster col to original attribute matrix
     transformed = model.transform(book_at)
@@ -151,7 +154,7 @@ def cosine_similarity(df1,df2):
 
     '''
 
-    
+
 
 
 
@@ -175,6 +178,7 @@ def get_neighbors(book_id,book_at,k):
     
     #get the sub_data of the same cluster as the inquire book_id
     sub_data = book_at.where(book_at.cluster == cluster_id)
+
     sub_data_features = sub_data.select('features')
 
 
@@ -197,6 +201,9 @@ def get_neighbors(book_id,book_at,k):
     score = []
     for i in k_idx:
         score.append(cs[i])
+
+
+        book_id, cosine_similarity
 
 
 
