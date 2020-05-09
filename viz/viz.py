@@ -49,19 +49,27 @@ def tsneplot(points = 10000, seed = 42, fig_path = 'tsne.png'):
     # standardize the latent factors
     X = items.iloc[:,1:num_features-1]
     standardized_X = preprocessing.scale(X)
+    print('processed data.')
 
     # compute tsne : using complexity rules - towardsdatascience.com/how-to-tune-hyperparameters-of-tsne-7c0596a18868
     tsne = TSNE(n_components=2, random_state=seed, perplexity=size**0.5, n_iter = 750)
     tsne_obj= tsne.fit_transform(items.iloc[:,1:num_features-1])
     tsne_df = pd.DataFrame({'X: tSNE Component 1':tsne_obj[:,0],'Y: tSNE Component 2':tsne_obj[:,1],'top-genre':items.iloc[:,-1]})
+    print('tsne data.')
 
     #print(tsne_df)
     
     # plot data
+    sns.set(font_scale=2.25) 
+    sns.set_style("white")
+
     sns_plot = sns.scatterplot(x="X", y="Y", hue="top-genre", palette=sns.color_palette("Paired", 10),legend='full', data=tsne_df)
+    sns_plot.legend(loc=2)
     sns_plot.set(ylim=(-30, 30))
     sns_plot.set(xlim=(-30, -30))
     sns_plot.set_title('tSNE Dimesionality Reduction of Item Factors from ALS Model by Genre')
+    print('plotted data.')
+
     sns_plot.figure.savefig(fig_path)
 
 # run to build plot
