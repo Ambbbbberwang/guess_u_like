@@ -122,6 +122,7 @@ def load_latent(model):
 
 
 ####Attribute-to-Latent_Factor Mapping####
+###k_means clustering for faster knn calculation###
 def k_means_transform(book_at,k=1000,load_model = True):
     '''
     input: attribute feature matrix of all books
@@ -147,19 +148,15 @@ def k_means_transform(book_at,k=1000,load_model = True):
     #transormed.show(3)
     return transformed
 
-####Compute cosine similarity between two columns####
+###Compute cosine similarity between two columns###
 def cos_sim(f1,f2):
     return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
 
 
 
+###k-Nearest-Neighbors Mapping###
 
-
-###k-Nearest-Neighbors Mapping
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-
-def get_neighbors(book_id,book_at,k):
+def get_k_nearest_neighbors(book_id,book_at,k):
     '''
     input: book_id for the cold start book
     book_at: should be the transformed attribute matrix with cluster assignment (for faster calculation)
@@ -175,9 +172,6 @@ def get_neighbors(book_id,book_at,k):
     target_book.createOrReplaceTempView('target_book')
     book_at.createOrReplaceTempView('book_at')
 
-
-
-
     
     ###get the sub_data of the same cluster as the target###
     sub_data = spark.sql('SELECT target_book.book_id AS target_id, target_book.features AS features1, target_book.cluster, \
@@ -187,11 +181,13 @@ def get_neighbors(book_id,book_at,k):
     #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
     ###calculate the cosine similarity###
-
     cosine_similarity = f.udf(cos_sim, FloatType())
-
     sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
 
+    ###get k nearest neighbors with highest cosine similarity###
+    knn_df = sub_data.select('book_id','cosine_similarity').sort('cosine_similarity',ascending=False).limit(k)
+
+    return knn_df
 
 
 
@@ -202,33 +198,7 @@ def get_neighbors(book_id,book_at,k):
 
 
 
-'''
 
-
-    cs = cosine_similarity(item_row,attribute_matrix)
-    
-
-
-
-
-
-
-    idx = np.argsort(cs)[::-1]
-    k_idx = idx[:k]
-    score = []
-    for i in k_idx:
-        score.append(cs[i])
-
-
-        book_id, cosine_similarity
-
-
-
-
-    return score,k_idx
-
-
-'''
 def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
     '''
     input: 
@@ -240,6 +210,11 @@ def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
     '''
 
     ####
+
+
+
+
+
 
 
 
