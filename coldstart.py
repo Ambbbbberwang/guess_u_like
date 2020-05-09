@@ -148,11 +148,6 @@ def k_means_transform(book_at,k=1000,load_model = True):
     return transformed
 
 ####Compute cosine similarity between two Spark dataframes####
-def cosine_similarity(df1,df2):
-    '''
-    input: two spark dataframes of cols ['book_id','features']
-
-    '''
 
 
 
@@ -171,7 +166,7 @@ def get_neighbors(book_id,book_at,k):
     '''
     from pyspark.sql import functions as f
     from pyspark.sql.types import *
-    from pyspark.sql.functions import *
+    
 
     #load the dataframe with a single row of target book
     target_book = book_at.where(book_at.book_id == book_id)
@@ -212,9 +207,6 @@ def get_neighbors(book_id,book_at,k):
 
 
 
-    
-
-
 
 def cos_sim(feature_comb):
     return [float(i.dot(j) / (i.norm(2) * j.norm(2))) for i, j in feature_comb]
@@ -222,7 +214,7 @@ def cos_sim(feature_comb):
 
 
 
-
+'''
 
 
     cs = cosine_similarity(item_row,attribute_matrix)
@@ -248,7 +240,7 @@ def cos_sim(feature_comb):
     return score,k_idx
 
 
-
+'''
 def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
     '''
     input: 
