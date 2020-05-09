@@ -65,5 +65,10 @@ def build_tsne_matrix(spark, latent_matrix, genre_df='hdfs:/user/yw2115/gooreads
 
     tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
 
+    tsne_matrix.createOrReplaceTempView('spark_df')
+    books = spark.sql('SELECT DISTINCT book_id FROM spark_df')
+    splits = books.randomSplit([0.25, 0.75], seed=42)
+    book_samp = splits[0]
+
     # save to csv for py script
-    tsne_matrix.coalesce(1).write.csv(save_csv)
+    book_samp.coalesce(1).write.csv(save_csv)
