@@ -14,6 +14,7 @@
 # python viz.py
 
 def tsneplot(points = 10000, seed = 42, fig_path = 'tsne.png'):
+
     """
     points: number of points to visualizse
     seed = random_state
