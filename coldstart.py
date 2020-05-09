@@ -203,7 +203,7 @@ def get_neighbors(book_id,book_at,k):
      #   f.sqrt(f.sum(sub_data['features1']**2)).alias('norm1'), \
       #  f.sqrt(f.sum(sub_data['features2'] **2)).alias('norm2'))
 
-      sub_data.select(cosine_similarity(feature_comb).alias('cos'))
+      #sub_data.select(cosine_similarity(feature_comb).alias('cos'))
 
 
 
