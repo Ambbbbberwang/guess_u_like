@@ -157,13 +157,14 @@ def k_means_transform(book_at,k=1000,load_model = True):
 ###k-Nearest-Neighbors Mapping
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-
+'''
 def get_neighbors(book_id,book_at,k):
-    '''
+
+    
     input: book_id for the cold start book
     book_at: should be the transformed attribute matrix with cluster assignment (for faster calculation)
     k: number of nearest neighbors
-    '''
+    
     from pyspark.sql import functions as f
     from pyspark.sql.types import *
     
@@ -204,6 +205,7 @@ def get_neighbors(book_id,book_at,k):
 
     #sub_data.columnSimilarities()
 
+'''
 
 
 
