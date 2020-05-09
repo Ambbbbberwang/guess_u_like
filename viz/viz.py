@@ -35,9 +35,10 @@ def tsneplot(points = 10000, seed = 42, fig_path = 'tsne.png'):
     from sklearn import preprocessing
 
     filename = glob("*.csv")[0]
+    print(filename)
     items = pd.read_csv(filename, engine='python', header=None)
     size=items.shape[0]
-    #print('read data.')
+    print('read data.')
 
     # subset data
     items = items.iloc[0:points, :]
@@ -58,6 +59,8 @@ def tsneplot(points = 10000, seed = 42, fig_path = 'tsne.png'):
     
     # plot data
     sns_plot = sns.scatterplot(x="X", y="Y", hue="top-genre", palette=sns.color_palette("Paired", 10),legend='full', data=tsne_df)
+    sns_plot.set(ylim=(-30, 30))
+    sns_plot.set(xlim=(-30, -30))
     sns_plot.set_title('tSNE Dimesionality Reduction of Item Factors from ALS Model by Genre')
     sns_plot.figure.savefig(fig_path)
 
