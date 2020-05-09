@@ -170,6 +170,8 @@ def get_neighbors(book_id,book_at,k):
     k: number of nearest neighbors
     '''
     from pyspark.sql import functions as f
+    from pyspark.sql.types import *
+    from pyspark.sql.functions import *
 
     #load the dataframe with a single row of target book
     target_book = book_at.where(book_at.book_id == book_id)
@@ -189,16 +191,19 @@ def get_neighbors(book_id,book_at,k):
     #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
     ###calculate the cosine similarity###
-    feature_comb = sub_data.rdd.map(lambda r: (r.features1,r.features2))
+    feature_comb = sub_data.rdd.map(lambda r: (r.features1,r.features2)).collect()
 
+    cosine_similarity = f.udf(cos_sim, FloatType())
 
-    sub_data.withColumn('cosine_similarity',cos_sim(feature_comb))
+    sub_data.withColumn('cosine_similarity', f.udf(cos_sim, FloatType())(col("myCol"), array([lit(v) for v in static_array])))
+
+    sub_data.withColumn('cosine_similarity',cosine_similarity(feature_comb))
 
     #cosine_df = sub_data.select(f.sum(sub_data['features1']*sub_data['features2']).alias('dot'),\
      #   f.sqrt(f.sum(sub_data['features1']**2)).alias('norm1'), \
       #  f.sqrt(f.sum(sub_data['features2'] **2)).alias('norm2'))
 
-
+      sub_data.select(cosine_similarity(feature_comb).alias('cos'))
 
 
 
@@ -212,8 +217,7 @@ def get_neighbors(book_id,book_at,k):
 
 
 def cos_sim(feature_comb):
-
-return [float(i.dot(j) / (i.norm(2) * j.norm(2))) for i, j in feature_comb]
+    return [float(i.dot(j) / (i.norm(2) * j.norm(2))) for i, j in feature_comb]
 
 
 
