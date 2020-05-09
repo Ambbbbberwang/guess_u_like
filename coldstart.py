@@ -139,7 +139,7 @@ def k_means_transform(book_at,k=1000,load_model = True):
         #model.save('k-means_model')
     else:
         from pyspark.ml.clustering import KMeansModel
-        model = KMeansModel.load(save_path_to_model)
+        model = KMeansModel.load('hdfs:/user/yw2115/k-means_model')
 
     #add the cluster col to original attribute matrix
     transformed = model.transform(book_at)
@@ -171,16 +171,49 @@ def get_neighbors(book_id,book_at,k):
     '''
     from pyspark.sql import functions as f
 
+    #load the dataframe with a single row of target book
+    target_book = book_at.where(book_at.book_id == book_id)
+    #target_book.show()
+    target_book.createOrReplaceTempView('target_book')
+    book_at.createOrReplaceTempView('book_at')
 
-    #get feature and cluster number for the book
-    feature = book_at.where(book_at.book_id == book_id).select('features').collect()[0].features
-    cluster_id = book_at.where(book_at.book_id == book_id).select('cluster').collect()[0].cluster
+
+
+
     
-    #get the sub_data of the same cluster as the inquire book_id
-    sub_data = book_at.where(book_at.cluster == cluster_id)
+    ###get the sub_data of the same cluster as the target###
+    sub_data = spark.sql('SELECT target_book.book_id AS target_id, target_book.features AS features1, target_book.cluster, \
+        book_at.book_id, book_at.features AS features2 FROM target_book JOIN book_at ON \
+        target_book.cluster = book_at.cluster')
+    #sub_data.show(10)
+    #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
-    sub_data_features = sub_data.select('features')
+    ###calculate the cosine similarity###
+    feature_comb = sub_data.rdd.map(lambda r: (r.features1,r.features2))
 
+
+    sub_data.withColumn('cosine_similarity',cos_sim(feature_comb))
+
+    #cosine_df = sub_data.select(f.sum(sub_data['features1']*sub_data['features2']).alias('dot'),\
+     #   f.sqrt(f.sum(sub_data['features1']**2)).alias('norm1'), \
+      #  f.sqrt(f.sum(sub_data['features2'] **2)).alias('norm2'))
+
+
+
+
+
+    #sub_data.columnSimilarities()
+
+
+
+
+    
+
+
+
+def cos_sim(feature_comb):
+
+return [float(i.dot(j) / (i.norm(2) * j.norm(2))) for i, j in feature_comb]
 
 
 
