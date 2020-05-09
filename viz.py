@@ -22,6 +22,8 @@ def tsneplot(sample = 10000, seed = 42, fig_path = 'tsne.png'):
     return None, saves plot
 
     """
+    import matplotlib
+    matplotlib.use('Agg')
 
     import matplotlib
     matplotlib.use('Agg')
