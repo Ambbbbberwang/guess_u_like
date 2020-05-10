@@ -8,6 +8,7 @@ from pyspark.sql import functions as f
 import timeit
 from pyspark.sql import Window
 from pyspark.mllib.evaluation import RankingMetrics
+from coldstart import *
 
 
 
@@ -118,7 +119,7 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
 
 #-----------------Recommender & Cold Start comparison----------
 
-def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.2):
+def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.2, load_path = True):
     
     # Drop a set of book from train (fraction of unique book in val)
     val.createOrReplaceTempView('val')                        
@@ -140,6 +141,20 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     
     # Get df of usesr_id, book_id, rating, prediction != NaN (train's seen book)
     als_predict = cold_predict.filter(cold_predict.prediction != float('nan'))
+
+    #Using functions from coldstart.py
+    #load the book attribute matrix
+    if load_path == True: 
+        #directly load the transformed matrix
+        book_at = spark.read.parquet('hdfs:/user/yw2115/book_at.parquet')
+    else: 
+        #build matrix from scratch using the 3 supplement datase
+        book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
+        book_at = k_means_transform(book_at,k=1000,load_model = True)
+
+    #load the book(item) latent factor matrix from cold_model
+    latent_matrix = load_latent(cold_model)
+
     
 
     

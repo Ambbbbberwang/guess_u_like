@@ -213,7 +213,7 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
     Note: the cosine_similarities of books in the same cluster are mostly over 0.99. Taking average is the same as weighted average.
     '''
     latent_matrix.createOrReplaceTempView('latent_matrix')
-    knn_df, cluster_df = get_k_nearest_neighbors(book_id,book_at,k) #cols: book_id, cosine similarity
+    knn_df, cluster_df = get_k_nearest_neighbors(spark, book_id,book_at,k) #cols: book_id, cosine similarity
 
     if all_data == True:
         knn_df.createOrReplaceTempView('knn_df')
@@ -239,16 +239,18 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 
 
 
+from pyspark.ml.recommendation import ALS, ALSModel
 
-
-def main():
+def test_main():
     book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
     transformed = k_means_transform(book_at,k=1000,load_model = True)
+    transformed.write.parquet('hdfs:/user/yw2115/book_at.parquet')
     book_id = 3
     k = 10
-    knn_df = get_k_nearest_neighbors(spark,book_id,transformed,k)
-    from pyspark.ml.recommendation import ALS, ALSModel
     model = ALSModel.load('hdfs:/user/xc1511/001_r200_re0015_m10')
+    latent_matrix = load_latent(model)
+    pred_df = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data = False)
+
 
 
 
