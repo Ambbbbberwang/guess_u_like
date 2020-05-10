@@ -180,6 +180,9 @@ def get_k_nearest_neighbors(spark,book_id,book_at,k):
     #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
     ###calculate the cosine similarity###
+    def cos_sim(f1,f2):
+        return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
+
     cosine_similarity = f.udf(cos_sim, FloatType())
     sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
 
@@ -189,10 +192,10 @@ def get_k_nearest_neighbors(spark,book_id,book_at,k):
     return knn_df
 
 
+kmeans_df = sub_data.select('book_id','cosine_similarity')
 
 
-
-def attribute_to_latent_mapping(book_id,book_at,latent_matrix,k):
+def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k):
     '''
     input: 
     book_id: the book id of cold start item
@@ -204,8 +207,22 @@ def attribute_to_latent_mapping(book_id,book_at,latent_matrix,k):
     K: rank in the model, also number of latent factors
     '''
     knn_df = get_k_nearest_neighbors(book_id,book_at,k)
-    
+    knn_df.createOrReplaceTempView('knn_df')
+    latent_matrix.createOrReplaceTempView('latent_matrix')    
 
+    kmeans_df.createOrReplaceTempView('kmeans_df')
+
+    map_latent = spark.sql('SELECT latent_matrix.*, knn_df.cosine_similarity FROM latent_matrix JOIN\
+        knn_df ON knn_df.book_id = latent_matrix.book_id')
+
+    map_latent = spark.sql('SELECT latent_matrix.*, kmeans_df.cosine_similarity FROM latent_matrix JOIN\
+        kmeans_df ON kmeans_df.book_id = latent_matrix.book_id')
+
+
+
+    pred = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
+
+    return pred
 
 
 
@@ -217,6 +234,8 @@ def main():
     book_id = 3
     k = 10
     knn_df = get_k_nearest_neighbors(spark,book_id,transformed,k)
+    from pyspark.ml.recommendation import ALS, ALSModel
+    model = ALSModel.load('hdfs:/user/xc1511/001_r200_re0015_m10')
 
 
 
