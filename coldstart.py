@@ -12,6 +12,10 @@ to a full collaborative filter model.
 '''
 
 #Reference: https://github.com/MengtingWan/goodreads/blob/master/samples.ipynb
+import pyspark.sql.functions as f
+from pyspark.sql.functions import when
+from pyspark.ml.feature import VectorAssembler
+
 
 ####Load Supplement Book Data####
 
@@ -24,9 +28,6 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
     mystery, thriller, crime| non-fiction| poetry| romance| young-adult
 
     '''
-    import pyspark.sql.functions as f
-    from pyspark.sql.functions import when
-    from pyspark.ml.feature import VectorAssembler
 
     book_df = spark.read.json('hdfs:/user/yw2115/goodreads_books.json.gz')
     author_df =spark.read.json('hdfs:/user/yw2115/goodreads_book_authors.json.gz')
@@ -225,9 +226,16 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
         map_latent = spark.sql('SELECT latent_matrix.*, cluster_df.cosine_similarity FROM latent_matrix JOIN\
             cluster_df ON cluster_df.book_id = latent_matrix.book_id')
 
-    pred = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
+    map_latent = map_latent.drop('book_id').drop('cosine_similarity')
+    pred_df = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
 
-    return pred
+    vecAssembler = VectorAssembler(inputCols=pred_df.columns, outputCol="features")
+    pred_df = vecAssembler.transform(pred_df)
+
+
+
+
+    return pred_df
 
 
 

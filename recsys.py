@@ -118,7 +118,7 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
 
 #-----------------Recommender & Cold Start comparison----------
 
-def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.5):
+def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.2):
     
     # Drop a set of book from train (fraction of unique book in val)
     val.createOrReplaceTempView('val')                        
@@ -141,6 +141,7 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     # Get df of usesr_id, book_id, rating, prediction != NaN (train's seen book)
     als_predict = cold_predict.filter(cold_predict.prediction != float('nan'))
     
+
     
     # NEXT STEP ????
     # 1. apply cold_start on cold_nan
