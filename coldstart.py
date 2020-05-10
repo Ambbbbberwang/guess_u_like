@@ -163,7 +163,6 @@ def get_k_nearest_neighbors(book_id,book_at,k):
     k: number of nearest neighbors
     '''
     from pyspark.sql import functions as f
-    from pyspark.sql.types import *
     
 
     #load the dataframe with a single row of target book
@@ -193,23 +192,32 @@ def get_k_nearest_neighbors(book_id,book_at,k):
 
 
 
-
-
-
-
-
-
-def attribute_to_latent_mapping(attribute_matrix,latent_matrix):
+def attribute_to_latent_mapping(book_id,book_at,latent_matrix,k):
     '''
     input: 
-    attribute_matrix of size (I*N)
-    latent_matrix of size (I*k)
+    book_id: the book id of cold start item
+    book_at: attribute_matrix of size (I*N) -- transformed book_at with cluster assignment
+    latent_matrix of size (I*K)
+    k: k nearest neighbors for mapping
     I: number of total items (books) 
     N: number of observable content features of a book
-    k: rank in the model, also number of latent factors
+    K: rank in the model, also number of latent factors
     '''
+    knn_df = get_k_nearest_neighbors(book_id,book_at,k)
+    
 
-    ####
+
+
+
+
+
+
+def main():
+    book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
+    transformed = k_means_transform(book_at,k=1000,load_model = True)
+    book_id = 3
+    k = 10
+    knn_df = get_k_nearest_neighbors(book_id,transformed,k)
 
 
 
