@@ -221,7 +221,6 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
             knn_df ON knn_df.book_id = latent_matrix.book_id')
         
     else: 
-        cluster_df = sub_data.select('book_id','cosine_similarity')
         cluster_df.createOrReplaceTempView('cluster_df')
         map_latent = spark.sql('SELECT latent_matrix.*, cluster_df.cosine_similarity FROM latent_matrix JOIN\
             cluster_df ON cluster_df.book_id = latent_matrix.book_id')
@@ -231,11 +230,12 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 
     vecAssembler = VectorAssembler(inputCols=pred_df.columns, outputCol="features")
     pred_df = vecAssembler.transform(pred_df)
+    pre = pred_df.select('features').collect()[0].features
 
 
 
 
-    return pred_df
+    return pred
 
 
 
