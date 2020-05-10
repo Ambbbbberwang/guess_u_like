@@ -163,7 +163,7 @@ def get_k_nearest_neighbors(spark,book_id,book_at,k):
     k: number of nearest neighbors
     '''
     from pyspark.sql import functions as f
-    
+    from pyspark.sql.types import FloatType
 
     #load the dataframe with a single row of target book
     target_book = book_at.where(book_at.book_id == book_id)
@@ -216,7 +216,7 @@ def main():
     transformed = k_means_transform(book_at,k=1000,load_model = True)
     book_id = 3
     k = 10
-    knn_df = get_k_nearest_neighbors(book_id,transformed,k)
+    knn_df = get_k_nearest_neighbors(spark,book_id,transformed,k)
 
 
 
