@@ -108,3 +108,5 @@ venv.bak/
 *.json.gz
 *.csv
 */tsne_matrix.csv/*
+*.DS_Store
+
