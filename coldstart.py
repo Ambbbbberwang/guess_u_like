@@ -156,7 +156,7 @@ def cos_sim(f1,f2):
 
 ###k-Nearest-Neighbors Mapping###
 
-def get_k_nearest_neighbors(book_id,book_at,k):
+def get_k_nearest_neighbors(spark,book_id,book_at,k):
     '''
     input: book_id for the cold start book
     book_at: should be the transformed attribute matrix with cluster assignment (for faster calculation)
@@ -205,7 +205,6 @@ def attribute_to_latent_mapping(book_id,book_at,latent_matrix,k):
     '''
     knn_df = get_k_nearest_neighbors(book_id,book_at,k)
     
-
 
 
 
