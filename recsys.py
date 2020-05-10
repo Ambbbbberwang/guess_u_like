@@ -113,8 +113,58 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
     print('Fitting Run Time: ', fit_end - fit_start)
     
     return best_model
-        
 
+
+
+#-----------------Recommender & Cold Start comparison----------
+
+def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.5):
+    
+    # Drop a set of book from train (fraction of unique book in val)
+    val.createOrReplaceTempView('val')                        
+    val_book = spark.sql('SELECT DISTINCT book_id FROM val')
+    cold_keep, cold_remove = val_book.randomSplit([1-fraction, fraction], seed=seed)
+    new_train= train.join(cold_remove, on=['book_id'], how='left_anti')
+    
+    # Build the recommendation model using ALS on the training data
+    
+    als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
+              coldStartStrategy="nan", implicitPrefs=False, seed = seed)
+    als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
+    
+    cold_model=als.fit(new_train)
+    cold_predict = cold_model.transform(val)
+    
+    # Get df of user_id, book_id, rating, prediction == NaN (train's unseen book)
+    cold_nan=cold_predict.filter(cold_predict.prediction == float('nan'))
+    
+    # Get df of usesr_id, book_id, rating, prediction != NaN (train's seen book)
+    als_predict = cold_predict.filter(cold_predict.prediction != float('nan'))
+    
+    
+    # NEXT STEP ????
+    # 1. apply cold_start on cold_nan
+    # 2. dot product on user matrix  -- confirmed with TA, right way!!!
+    # 3. fill NaN with cold_start prediction
+    # 4. Output: cold_predict able to union with als_predict
+
+    #>>> cold_nan.printSchema()
+    #root
+    #|-- user_id: integer (nullable = true)
+    #|-- book_id: integer (nullable = true)
+    #|-- rating: float (nullable = true)
+    #|-- prediction: float (nullable = False)
+    
+    
+    # Merge als prediction & cold start prediction for evaluation
+    merge_predict = als_predict.union(cold_predict)
+    
+    # Generate RMSE score for merged prediction df : user_id, book_id, rating, prediction (no NaN this time)
+    eval_RMSE = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")
+    merge_score = eval_RMSE.evaluate(merge_predict)
+       
+    print('Stimulate cold-start by hold out fraction = %s of book in val during training' % (fraction))
+    print('For rank %s, regParam %s, maxIter %s : the RMSE is %s' % (rank, regParam, maxIter, merge_score))
 
 
 #-----------------Recommender Test-----------------------------
@@ -150,7 +200,6 @@ def RecSys_test(spark, test, best_model):
     print('Testing Run Time:', test_end - test_start)
     
     
-
 
 #-----------------Ranking Evaluator----------------------------
 
