@@ -188,14 +188,15 @@ def get_k_nearest_neighbors(spark,book_id,book_at,k):
 
     ###get k nearest neighbors with highest cosine similarity###
     knn_df = sub_data.select('book_id','cosine_similarity').sort('cosine_similarity',ascending=False).limit(k)
+    cluster_df = sub_data.select('book_id','cosine_similarity') #all books in the same cluster
 
-    return knn_df
-
-
-kmeans_df = sub_data.select('book_id','cosine_similarity')
+    return knn_df, cluster_df
 
 
-def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k):
+
+
+
+def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data = False):
     '''
     input: 
     book_id: the book id of cold start item
@@ -205,20 +206,24 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k):
     I: number of total items (books) 
     N: number of observable content features of a book
     K: rank in the model, also number of latent factors
+    all_data: if all_data == False, it means the latent matrix extracted from the model is only trained
+    on 1%, 5% or 25% data, knn of the target book may not included in the training set. In this case, we
+    use average latent factor of books in the same cluster rather than weighted knn as prediction. 
+    Note: the cosine_similarities of books in the same cluster are mostly over 0.99. Taking average is the same as weighted average.
     '''
-    knn_df = get_k_nearest_neighbors(book_id,book_at,k)
-    knn_df.createOrReplaceTempView('knn_df')
-    latent_matrix.createOrReplaceTempView('latent_matrix')    
+    latent_matrix.createOrReplaceTempView('latent_matrix')
+    knn_df, cluster_df = get_k_nearest_neighbors(book_id,book_at,k) #cols: book_id, cosine similarity
 
-    kmeans_df.createOrReplaceTempView('kmeans_df')
-
-    map_latent = spark.sql('SELECT latent_matrix.*, knn_df.cosine_similarity FROM latent_matrix JOIN\
-        knn_df ON knn_df.book_id = latent_matrix.book_id')
-
-    map_latent = spark.sql('SELECT latent_matrix.*, kmeans_df.cosine_similarity FROM latent_matrix JOIN\
-        kmeans_df ON kmeans_df.book_id = latent_matrix.book_id')
-
-
+    if all_data == True:
+        knn_df.createOrReplaceTempView('knn_df')
+        map_latent = spark.sql('SELECT latent_matrix.*, knn_df.cosine_similarity FROM latent_matrix JOIN\
+            knn_df ON knn_df.book_id = latent_matrix.book_id')
+        
+    else: 
+        cluster_df = sub_data.select('book_id','cosine_similarity')
+        cluster_df.createOrReplaceTempView('cluster_df')
+        map_latent = spark.sql('SELECT latent_matrix.*, cluster_df.cosine_similarity FROM latent_matrix JOIN\
+            cluster_df ON cluster_df.book_id = latent_matrix.book_id')
 
     pred = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
 
