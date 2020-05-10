@@ -2,7 +2,7 @@
 
 # rec_fit & rec_test & ranking_evaluator
 
-from pyspark.ml.recommendation import ALS #, Rating
+from pyspark.ml.recommendation import ALS, ALSModel #, Rating
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.sql import functions as f
 import timeit
@@ -128,12 +128,16 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     new_train= train.join(cold_remove, on=['book_id'], how='left_anti')
     
     # Build the recommendation model using ALS on the training data
-    
-    als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
-              coldStartStrategy="nan", implicitPrefs=False, seed = seed)
-    als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
-    
-    cold_model=als.fit(new_train)
+    if load_path == True:
+        cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model')
+    else:
+
+        als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
+                  coldStartStrategy="nan", implicitPrefs=False, seed = seed)
+        als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
+        
+        cold_model=als.fit(new_train)
+
     cold_predict = cold_model.transform(val)
     
     # Get df of user_id, book_id, rating, prediction == NaN (train's unseen book)
@@ -154,6 +158,15 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
 
     #load the book(item) latent factor matrix from cold_model
     latent_matrix = load_latent(cold_model)
+
+    #get the cold-start book ids
+    book_lst = [int(x.book_id) for x in cold_remove.select('book_id').collect()]
+    cold_pred = []
+    for book_id in book_lst:
+        pred = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,10,all_data = False)
+        cold_pred.append(pred)
+
+    #get the user latent factor
 
     
 
