@@ -268,9 +268,11 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 
 
 
-from pyspark.ml.recommendation import ALS, ALSModel
 
+
+'''
 def test_main():
+    from pyspark.ml.recommendation import ALS, ALSModel
     #book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
     book_at = build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz',records_path="hdfs:/user/xc1511/onepct_int_001.parquet")
     transformed = k_means_transform(book_at,k=1000,load_model = False)
@@ -281,58 +283,7 @@ def test_main():
     latent_matrix = load_latent(model)
     pred_df = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data = False)
 
+'''
 
 
-
-
-
-
-
-
-#### Using supplemental data for TSNE ####
-
-def build_tsne_matrix(spark, latent_matrix, genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz', save_csv='tsne_matrix.csv'):
-
-    """
-    saves the csv for the tsne plot in viz.py
-    # reference: https://stackoverflow.com/questions/46179453/how-to-compute-maximum-per-row-and-return-a-colum-of-max-value-and-another-colu
-
-    genre_df: hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz, downloaded from goodreads online
-    latent_matrix: output from load_latent(model)
-
-    return: None
-    saves: data structure with bookid, lf's from the model, and genre matched
-    """
-
-    from pyspark.sql.types import StringType
-    from pyspark.sql.functions import col, greatest, udf, array
-    import pyspark.sql.functions as f
-
-    genre_df =spark.read.json(genre_df)
-
-    genre_at = genre_df.select('book_id',f.expr('genres.children'),f.expr('genres.`comics, graphic`'),\
-        f.expr('genres.`fantasy, paranormal`'),f.expr('genres.fiction'), \
-        f.expr('genres.`history, historical fiction, biography`'), f.expr('genres.`mystery, thriller, crime`'),\
-        f.expr('genres.`non-fiction`'),f.expr('genres.poetry'),f.expr('genres.romance'),f.expr('genres.`young-adult`'))
-    #genre_at = genre_at.toDF()
-    #genre_only = genre_at.drop('book_id')
-
-    df1 = genre_at.withColumn("maxValue", greatest(*[col(x) for x in genre_at.columns[1:]]))
-
-    col_arr = df1.columns
-
-    def modify_values(r):
-        for i in range(len(r[:-1])):
-            if r[i]==r[-1]:
-                return col_arr[i]
-
-    modify_values_udf = udf(modify_values, StringType())
-
-    df1 = df1.withColumn("maxColumn", modify_values_udf(array(df1.columns)))
-    book_genre = df1.select('book_id', 'maxColumn')
-
-    tsne_matrix=latent_matrix.join(book_genre, on='book_id', how='inner')
-
-    # save to csv for py script
-    tsne_matrix.coalesce(1).write.csv(save_csv)
 

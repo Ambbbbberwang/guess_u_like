@@ -192,20 +192,6 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
     dot_product = f.udf(dot_p, FloatType())
     cold_prediction = cold_prediction.withColumn('prediction',dot_product('book_latent','user_latent'))
     cold_prediction = cold_prediction.drop('book_latent').drop('user_latent')
-
-    
-    # NEXT STEP ????
-    # 1. apply cold_start on cold_nan
-    # 2. dot product on user matrix  -- confirmed with TA, right way!!!
-    # 3. fill NaN with cold_start prediction
-    # 4. Output: cold_predict able to union with als_predict
-
-    #>>> cold_nan.printSchema()
-    #root
-    #|-- user_id: integer (nullable = true)
-    #|-- book_id: integer (nullable = true)
-    #|-- rating: float (nullable = true)
-    #|-- prediction: float (nullable = False)
     
     
     # Merge als prediction & cold start prediction for evaluation
