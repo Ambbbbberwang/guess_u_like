@@ -59,6 +59,7 @@ def build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodrea
         records_pq.createOrReplaceTempView('records_pq')
         book_pq = spark.sql('SELECT DISTINCT book_id FROM records_pq')
 
+        book_pq.createOrReplaceTempView('book_pq')
         book_df.createOrReplaceTempView('book_df')
         genre_at.createOrReplaceTempView('genre_at')
         genre_at = spark.sql('SELECT genre_at.* FROM genre_at JOIN book_pq ON \
@@ -263,9 +264,10 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 from pyspark.ml.recommendation import ALS, ALSModel
 
 def test_main():
-    book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
-    transformed = k_means_transform(book_at,k=100,load_model = True)
-    transformed.write.parquet('hdfs:/user/yw2115/book_at_100.parquet')
+    #book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
+    book_at = build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz',records_path="hdfs:/user/xc1511/onepct_int_001.parquet")
+    transformed = k_means_transform(book_at,k=1000,load_model = False)
+    transformed.write.parquet('hdfs:/user/yw2115/book_at_001.parquet')
     #book_id = 3
     #k = 10
     model = ALSModel.load('hdfs:/user/xc1511/001_r200_re0015_m10')
