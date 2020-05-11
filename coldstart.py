@@ -135,7 +135,7 @@ def load_latent(model):
 
 ####Attribute-to-Latent_Factor Mapping####
 ###k_means clustering for faster knn calculation###
-def k_means_transform(book_at,k=1000,load_model = True):
+def k_means_transform(book_at,k=100,load_model = True):
     '''
     input: attribute feature matrix of all books
     output: transformed matrix including cluster assignment
@@ -243,9 +243,6 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
     pred_df = vecAssembler.transform(pred_df)
     pred = pred_df.select('features').collect()[0].features
 
-
-
-
     return pred
 
 
@@ -254,7 +251,7 @@ from pyspark.ml.recommendation import ALS, ALSModel
 
 def test_main():
     book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
-    transformed = k_means_transform(book_at,k=1000,load_model = True)
+    transformed = k_means_transform(book_at,k=100,load_model = True)
     transformed.write.parquet('hdfs:/user/yw2115/book_at.parquet')
     book_id = 3
     k = 10

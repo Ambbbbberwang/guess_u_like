@@ -122,7 +122,7 @@ def RecSys_fit (spark, train, val, metric = 'RMSE', seed = 42,ranks = [10, 15],
 
 #-----------------Recommender & Cold Start comparison----------
 
-def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, maxIter=10, fraction=0.2, load_path = True):
+def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, maxIter=10, fraction=0.01, load_path = True):
     
     # Drop a set of book from train (fraction of unique book in val)
     val.createOrReplaceTempView('val')                        
@@ -131,15 +131,15 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     new_train= train.join(cold_remove, on=['book_id'], how='left_anti')
     
     # Build the recommendation model using ALS on the training data
-    if load_path == True:
-        cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model')
-    else:
+    #if load_path == True:
+        #cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model')
+    #else:
 
-        als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
-                  coldStartStrategy="nan", implicitPrefs=False, seed = seed)
-        als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
-        
-        cold_model=als.fit(new_train)
+    als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
+              coldStartStrategy="nan", implicitPrefs=False, seed = seed)
+    als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
+    
+    cold_model=als.fit(new_train)
 
     cold_predict = cold_model.transform(val)
     
@@ -153,11 +153,11 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     #load the book attribute matrix
     if load_path == True: 
         #directly load the transformed matrix
-        book_at = spark.read.parquet('hdfs:/user/yw2115/book_at.parquet')
+        book_at = spark.read.parquet('hdfs:/user/yw2115/book_at_100.parquet')
     else: 
         #build matrix from scratch using the 3 supplement datase
         book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
-        book_at = k_means_transform(book_at,k=1000,load_model = True)
+        book_at = k_means_transform(book_at,k=100,load_model = True)
 
     #load the book(item) and user latent factor matrix from cold_model
     latent_matrix,user_latent = load_latent(cold_model)
@@ -168,7 +168,9 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     #predict the latent factor for the cold-start books
     cold_pred = []
     for book_id in book_lst:
+        #print('id',book_id)
         pred = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,10,all_data = False)
+        #print(pred)
         cold_pred.append(pred)
     cold_pred_df = sqlContext.createDataFrame(zip(book_lst, cold_pred), schema=['book_id', 'pred_latent'])
 
