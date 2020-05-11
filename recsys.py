@@ -131,16 +131,16 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
     new_train= train.join(cold_remove, on=['book_id'], how='left_anti')
     
     # Build the recommendation model using ALS on the training data
-    #if load_path == True:
-        #cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model_f001_r10')
-    #else:
+    if load_path == True:
+        cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model_f001_r10')
+    else:
 
-    als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
-              coldStartStrategy="nan", implicitPrefs=False, seed = seed)
-    als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
-    
-    cold_model=als.fit(new_train)
-    #cold_model.save('cold_model_f001_r10')
+        als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
+                  coldStartStrategy="nan", implicitPrefs=False, seed = seed)
+        als.setParams(rank=rank, regParam=regParam, maxIter=maxIter)
+        
+        cold_model=als.fit(new_train)
+        #cold_model.save('cold_model_f001_r10')
 
     cold_predict = cold_model.transform(val)
     

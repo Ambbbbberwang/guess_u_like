@@ -242,25 +242,25 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 
     if cluster_df.rdd.isEmpty() == True:
         return 'nan'
+    else:
+        if all_data == True:
+            knn_df.createOrReplaceTempView('knn_df')
+            map_latent = spark.sql('SELECT latent_matrix.*, knn_df.cosine_similarity FROM latent_matrix JOIN\
+                knn_df ON knn_df.book_id = latent_matrix.book_id')
+            
+        else: 
+            cluster_df.createOrReplaceTempView('cluster_df')
+            map_latent = spark.sql('SELECT latent_matrix.*, cluster_df.cosine_similarity FROM latent_matrix JOIN\
+                cluster_df ON cluster_df.book_id = latent_matrix.book_id')
 
-    if all_data == True:
-        knn_df.createOrReplaceTempView('knn_df')
-        map_latent = spark.sql('SELECT latent_matrix.*, knn_df.cosine_similarity FROM latent_matrix JOIN\
-            knn_df ON knn_df.book_id = latent_matrix.book_id')
-        
-    else: 
-        cluster_df.createOrReplaceTempView('cluster_df')
-        map_latent = spark.sql('SELECT latent_matrix.*, cluster_df.cosine_similarity FROM latent_matrix JOIN\
-            cluster_df ON cluster_df.book_id = latent_matrix.book_id')
+        map_latent = map_latent.drop('book_id').drop('cosine_similarity')
+        pred_df = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
 
-    map_latent = map_latent.drop('book_id').drop('cosine_similarity')
-    pred_df = map_latent.select(*[f.mean(c).alias(c) for c in map_latent.columns])
+        vecAssembler = VectorAssembler(inputCols=pred_df.columns, outputCol="features")
+        pred_df = vecAssembler.transform(pred_df)
+        pred = pred_df.select('features').collect()[0].features
 
-    vecAssembler = VectorAssembler(inputCols=pred_df.columns, outputCol="features")
-    pred_df = vecAssembler.transform(pred_df)
-    pred = pred_df.select('features').collect()[0].features
-
-    return pred
+        return pred
 
 
 
