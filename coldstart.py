@@ -241,7 +241,7 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
 
     vecAssembler = VectorAssembler(inputCols=pred_df.columns, outputCol="features")
     pred_df = vecAssembler.transform(pred_df)
-    pre = pred_df.select('features').collect()[0].features
+    pred = pred_df.select('features').collect()[0].features
 
 
 
