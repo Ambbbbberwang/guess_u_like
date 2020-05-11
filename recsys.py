@@ -132,7 +132,7 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
     
     # Build the recommendation model using ALS on the training data
     #if load_path == True:
-        #cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model')
+        #cold_model = ALSModel.load('hdfs:/user/yw2115/cold_model_f001_r10')
     #else:
 
     als = ALS(userCol="user_id", itemCol="book_id", ratingCol="rating",
@@ -169,9 +169,9 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
     #predict the latent factor for the cold-start books
     cold_pred = []
     for book_id in book_lst:
-        #print('id',book_id)
+        print('id',book_id)
         pred = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,10,all_data = False)
-        #print(pred)
+        print('pred',pred)
         cold_pred.append(pred)
     cold_pred_df = sqlContext.createDataFrame(zip(book_lst, cold_pred), schema=['book_id', 'pred_latent'])
 
