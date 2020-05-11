@@ -57,12 +57,14 @@ def build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodrea
     if sub == 0.01:
         records_pq = spark.read.parquet(records_path)
         records_pq.createOrReplaceTempView('records_pq')
+        book_pq = spark.sql('SELECT DISTINCT book_id FROM records_pq')
+
         book_df.createOrReplaceTempView('book_df')
         genre_at.createOrReplaceTempView('genre_at')
-        genre_at = spark.sql('SELECT genre_at.* FROM genre_at JOIN records_pq ON \
-            genre_at.book_id = records_pq.book_id')
-        book_df = spark.sql('SELECT book_df.* FROM book_df JOIN records_pq ON \
-            book_df.book_id = records_pq.book_id')
+        genre_at = spark.sql('SELECT genre_at.* FROM genre_at JOIN book_pq ON \
+            genre_at.book_id = book_pq.book_id')
+        book_df = spark.sql('SELECT book_df.* FROM book_df JOIN book_pq ON \
+            book_df.book_id = book_pq.book_id')
 
     ####Add Author Rating as Additional Attribute####
     #Select the first author (there are books with more than 1 author, first author is the main author)
