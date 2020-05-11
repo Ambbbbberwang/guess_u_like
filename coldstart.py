@@ -191,32 +191,36 @@ def get_k_nearest_neighbors(spark,book_id,book_at,k):
     from pyspark.sql import functions as f
     from pyspark.sql.types import FloatType
 
-    #load the dataframe with a single row of target book
-    target_book = book_at.where(book_at.book_id == book_id)
-    #target_book.show()
-    target_book.createOrReplaceTempView('target_book')
-    book_at.createOrReplaceTempView('book_at')
+    if book_at.where(book_at.book_id == book_id).rdd.isEmpty() == True:
+        return 0,0
+    else:
 
-    
-    ###get the sub_data of the same cluster as the target###
-    sub_data = spark.sql('SELECT target_book.book_id AS target_id, target_book.features AS features1, target_book.cluster, \
-        book_at.book_id, book_at.features AS features2 FROM target_book JOIN book_at ON \
-        target_book.cluster = book_at.cluster')
-    #sub_data.show(10)
-    #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
+        #load the dataframe with a single row of target book
+        target_book = book_at.where(book_at.book_id == book_id)
+        #target_book.show()
+        target_book.createOrReplaceTempView('target_book')
+        book_at.createOrReplaceTempView('book_at')
 
-    ###calculate the cosine similarity###
-    def cos_sim(f1,f2):
-        return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
+        
+        ###get the sub_data of the same cluster as the target###
+        sub_data = spark.sql('SELECT target_book.book_id AS target_id, target_book.features AS features1, target_book.cluster, \
+            book_at.book_id, book_at.features AS features2 FROM target_book JOIN book_at ON \
+            target_book.cluster = book_at.cluster')
+        #sub_data.show(10)
+        #DataFrame[target_id: string, features1: vector, cluster: int, book_id: string, features2: vector]
 
-    cosine_similarity = f.udf(cos_sim, FloatType())
-    sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
+        ###calculate the cosine similarity###
+        def cos_sim(f1,f2):
+            return float(f1.dot(f2) / (f1.norm(2) * f2.norm(2))) 
 
-    ###get k nearest neighbors with highest cosine similarity###
-    knn_df = sub_data.select('book_id','cosine_similarity').sort('cosine_similarity',ascending=False).limit(k)
-    cluster_df = sub_data.select('book_id','cosine_similarity') #all books in the same cluster
+        cosine_similarity = f.udf(cos_sim, FloatType())
+        sub_data = sub_data.withColumn('cosine_similarity',cosine_similarity('features1','features2'))
 
-    return knn_df, cluster_df
+        ###get k nearest neighbors with highest cosine similarity###
+        knn_df = sub_data.select('book_id','cosine_similarity').sort('cosine_similarity',ascending=False).limit(k)
+        cluster_df = sub_data.select('book_id','cosine_similarity') #all books in the same cluster
+
+        return knn_df, cluster_df
 
 
 
@@ -240,7 +244,7 @@ def attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data =
     latent_matrix.createOrReplaceTempView('latent_matrix')
     knn_df, cluster_df = get_k_nearest_neighbors(spark, book_id,book_at,k) #cols: book_id, cosine similarity
 
-    if cluster_df.rdd.isEmpty() == True:
+    if cluster_df == 0:
         return 'nan'
     else:
         if all_data == True:
