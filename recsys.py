@@ -151,13 +151,13 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
 
     #Using functions from coldstart.py
     #load the book attribute matrix
-    if load_path == True: 
+    #if load_path == True: 
         #directly load the transformed matrix
-        book_at = spark.read.parquet('hdfs:/user/yw2115/book_at_100.parquet')
-    else: 
+        #book_at = spark.read.parquet('hdfs:/user/yw2115/book_at_100.parquet')
+    #else: 
         #build matrix from scratch using the 3 supplement datase
-        book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
-        book_at = k_means_transform(book_at,k=100,load_model = True)
+    book_at = build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz',records_path="hdfs:/user/xc1511/onepct_int_001.parquet")
+    book_at = k_means_transform(book_at,k=100,load_model = True)
 
     #load the book(item) and user latent factor matrix from cold_model
     latent_matrix,user_latent = load_latent(cold_model)

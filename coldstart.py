@@ -146,7 +146,7 @@ def load_latent(model):
 
 ####Attribute-to-Latent_Factor Mapping####
 ###k_means clustering for faster knn calculation###
-def k_means_transform(book_at,k=100,load_model = True):
+def k_means_transform(book_at,k=100,load_model = False):
     '''
     input: attribute feature matrix of all books
     output: transformed matrix including cluster assignment
