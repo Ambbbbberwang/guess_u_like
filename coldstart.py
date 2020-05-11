@@ -19,7 +19,7 @@ from pyspark.ml.feature import VectorAssembler
 
 ####Load Supplement Book Data####
 
-def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz'):
+def build_attribute_matrix(spark, sub = 0.01, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz',records_path="hdfs:/user/xc1511/onepct_int_001.parquet"):
 
     ####Create Attribute Matrix for Genres####
     '''
@@ -52,6 +52,17 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
         genre_at = genre_at.withColumn(col_name, when(genre_at[col_name].isNotNull(), 1).otherwise(0))
 
     #genre_at.show(10)
+
+    #subsample 1% data
+    if sub == 0.01:
+        records_pq = spark.read.parquet(records_path)
+        records_pq.createOrReplaceTempView('records_pq')
+        book_df.createOrReplaceTempView('book_df')
+        genre_at.createOrReplaceTempView('genre_at')
+        genre_at = spark.sql('SELECT genre_at.* FROM genre_at JOIN records_pq ON \
+            genre_at.book_id = records_pq.book_id')
+        book_df = spark.sql('SELECT book_df.* FROM book_df JOIN records_pq ON \
+            book_df.book_id = records_pq.book_id')
 
     ####Add Author Rating as Additional Attribute####
     #Select the first author (there are books with more than 1 author, first author is the main author)
@@ -252,9 +263,9 @@ from pyspark.ml.recommendation import ALS, ALSModel
 def test_main():
     book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
     transformed = k_means_transform(book_at,k=100,load_model = True)
-    transformed.write.parquet('hdfs:/user/yw2115/book_at.parquet')
-    book_id = 3
-    k = 10
+    transformed.write.parquet('hdfs:/user/yw2115/book_at_100.parquet')
+    #book_id = 3
+    #k = 10
     model = ALSModel.load('hdfs:/user/xc1511/001_r200_re0015_m10')
     latent_matrix = load_latent(model)
     pred_df = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,k,all_data = False)
