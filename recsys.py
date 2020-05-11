@@ -174,7 +174,7 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
         print('pred',pred)
         cold_pred.append(pred)
     cold_pred_df = sqlContext.createDataFrame(zip(book_lst, cold_pred), schema=['book_id', 'pred_latent'])
-    cold_pred_df = cold_pred_df.filter(cold_pred_df.pred_latent!=''nan'')
+    cold_pred_df = cold_pred_df.filter(cold_pred_df.pred_latent!='nan')
 
    #join the 3 df: predicted latent factor for cold-start books; latent factor for users; cold_nan 
     user_latent.createOrReplaceTempView('user_latent')
