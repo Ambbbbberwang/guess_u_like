@@ -9,6 +9,9 @@ import timeit
 from pyspark.sql import Window
 from pyspark.mllib.evaluation import RankingMetrics
 from coldstart import *
+from pyspark.sql import SQLContext
+from pyspark.sql import functions as f
+from pyspark.sql.types import FloatType
 
 
 
@@ -156,19 +159,35 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
         book_at = build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.json.gz',author_df='hdfs:/user/yw2115/goodreads_book_authors.json.gz',genre_df='hdfs:/user/yw2115/gooreads_book_genres_initial.json.gz')
         book_at = k_means_transform(book_at,k=1000,load_model = True)
 
-    #load the book(item) latent factor matrix from cold_model
-    latent_matrix = load_latent(cold_model)
+    #load the book(item) and user latent factor matrix from cold_model
+    latent_matrix,user_latent = load_latent(cold_model)
+    #user_latent cols: user_id, features
 
     #get the cold-start book ids
     book_lst = [int(x.book_id) for x in cold_remove.select('book_id').collect()]
+    #predict the latent factor for the cold-start books
     cold_pred = []
     for book_id in book_lst:
         pred = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,10,all_data = False)
         cold_pred.append(pred)
+    cold_pred_df = sqlContext.createDataFrame(zip(book_lst, cold_pred), schema=['book_id', 'pred_latent'])
 
-    #get the user latent factor
+   #join the 3 df: predicted latent factor for cold-start books; latent factor for users; cold_nan 
+    user_latent.createOrReplaceTempView('user_latent')
+    cold_pred_df.createOrReplaceTempView('cold_pred_df')
+    cold_nan.createOrReplaceTempView('cold_nan')
 
-    
+    cold_prediction = spark.sql('SELECT cold_nan.user_id, cold_nan.book_id, cold_nan.rating,\
+        cold_pred_df.pred_latent AS book_latent, user_latent.features AS user_latent FROM \
+        cold_pred_df JOIN cold_nan ON cold_pred_df.book_id = cold_nan.book_id \
+        JOIN user_latent ON cold_nan.user_id = user_latent.user_id')
+
+    def dot_p(f1,f2):
+        return float(f1.dot(f2))
+
+    dot_product = f.udf(dot_p, FloatType())
+    cold_prediction = cold_prediction.withColumn('prediction',dot_product('book_latent','user_latent'))
+    cold_prediction = cold_prediction.drop('book_latent').drop('user_latent')
 
     
     # NEXT STEP ????
@@ -186,7 +205,7 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 200, regParam = 0.015, 
     
     
     # Merge als prediction & cold start prediction for evaluation
-    merge_predict = als_predict.union(cold_predict)
+    merge_predict = als_predict.union(cold_prediction)
     
     # Generate RMSE score for merged prediction df : user_id, book_id, rating, prediction (no NaN this time)
     eval_RMSE = RegressionEvaluator(metricName="rmse", labelCol="rating", predictionCol="prediction")

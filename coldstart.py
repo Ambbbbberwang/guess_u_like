@@ -95,13 +95,14 @@ def build_attribute_matrix(spark, book_df='hdfs:/user/yw2115/goodreads_books.jso
 
 
 
-####Load latent factor for books####
+####Load latent factor for books and users####
 def load_latent(model):
 
     #from pyspark.sql.functions import *
     #from pyspark.sql import selectExpr
     
     latent = model.itemFactors 
+    user = model.userFactors
     #a DataFrame that stores item factors in two columns: id and features
     size = model.rank
     col = ['id']
@@ -110,15 +111,25 @@ def load_latent(model):
 
     #Convert to latent matrix with first col as "book_id" the rest col are latent features
     latent = latent.selectExpr(col)
+    user = user.selectExpr(col)
     #rename cols
     new_col = ['book_id']
+    user_col = ['user_id']
+    f_col = []
     for i in range(size):
         new_col.append('f'+str(i))
+        f_col.append('f'+str(i))
+        user_col.append('f'+str(i))
     #return latent matrix
     latent_matrix = latent.toDF(*new_col)
+    user_latent = user.toDF(*user_col)
+    #load user latent factor 
+    vecAssembler = VectorAssembler(inputCols=f_col, outputCol="features")
+    user_latent = vecAssembler.transform(user_latent)
+    user_latent = user_latent.select('user_id','features')
 
 
-    return latent_matrix
+    return latent_matrix,user_latent
 
 
 
