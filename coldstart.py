@@ -146,7 +146,7 @@ def load_latent(model):
 
 ####Attribute-to-Latent_Factor Mapping####
 ###k_means clustering for faster knn calculation###
-def k_means_transform(book_at,k=100,load_model = False):
+def k_means_transform(book_at,k=1000,load_model = False):
     '''
     input: attribute feature matrix of all books
     output: transformed matrix including cluster assignment
@@ -160,7 +160,7 @@ def k_means_transform(book_at,k=100,load_model = False):
         from pyspark.ml.clustering import KMeans
         kmeans = KMeans(k=k, seed=42) #divide all books to 1000 clusters (1/1000, less computation for knn)
         model = kmeans.fit(book_at.select('features'))
-        #model.save('k-means_model')
+        model.save('k-means_model_001')
     else:
         from pyspark.ml.clustering import KMeansModel
         model = KMeansModel.load('hdfs:/user/yw2115/k-means_model')
