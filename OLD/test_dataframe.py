@@ -14,6 +14,8 @@ test_df.select('id',f.expr('col.a'),f.expr('col.b')).show()
 
 
 
+
+
 '''
 +---+-------------------+
 | id|           an_array|

@@ -173,7 +173,21 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
         pred = attribute_to_latent_mapping(spark,book_id,book_at,latent_matrix,10,all_data = False)
         print('pred',pred)
         cold_pred.append(pred)
-    cold_pred_df = sqlContext.createDataFrame(zip(book_lst, cold_pred), schema=['book_id', 'pred_latent'])
+
+    #clean nan predictions (once the model is trained on full dataset, this won't be a problem. There is nan only because the model is trained on 1% of all data)
+    d = []
+    for i in range(len(cold_pred)):
+        if cold_pred[i] == 'nan':
+            d.append(i)
+    new_book_lst = []
+    cleaned_pred = [x for x in cold_pred if x!='nan']
+    for i in range(len(book_lst)):
+        if i not in d:
+            new_book_lst.append(book_lst[i])
+    #len(cleaned_pred)
+    #len(new_book_lst)
+
+    cold_pred_df = sqlContext.createDataFrame(zip(new_book_lst, cleaned_pred), schema=['book_id', 'pred_latent'])
     cold_pred_df = cold_pred_df.filter(cold_pred_df.pred_latent!='nan')
 
    #join the 3 df: predicted latent factor for cold-start books; latent factor for users; cold_nan 
@@ -203,7 +217,7 @@ def RecSys_ColdStart(spark, train, val, seed = 42,rank = 10, regParam = 0.015, m
        
     print('Stimulate cold-start by hold out fraction = %s of book in val during training' % (fraction))
     print('For rank %s, regParam %s, maxIter %s : the RMSE is %s' % (rank, regParam, maxIter, merge_score))
-
+    #fraction = 0.01, rank 10, regParam 0.015, maxIter 10: the RMSE is 2.2074422775599105
 
 #-----------------Recommender Test-----------------------------
 
