@@ -1,4 +1,4 @@
-## Final Project Report:
+## Final Project:
 ### “Guess U Like”
 
 Team:
