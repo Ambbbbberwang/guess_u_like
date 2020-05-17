@@ -2,15 +2,14 @@
 ### “Guess U Like”
 
 Team:
-* Xiangyun Chu (xc1511)
-* Elizabeth Combs (eac721)
-* Amber Wang (yw2115)
+* Xiangyun Chu 
+* Elizabeth Combs 
+* Amber Wang 
 
 Course:
 * New York University
 * DSGA-1004: Big Data
 * Professor Brian McFee
-* May 11, 2020
 
 *Overview:* 
 
@@ -18,4 +17,4 @@ In the 21st century, many brick and mortar stores with limited inventory have be
 
 *Please see our final PDF report for a full overview of the recommender system and extentions developed.*
 
-![TSNE Graph](/master/viz/tsne.png)
+![TSNE Graph](https://github.com/lcombs/guess_u_like/blob/master/viz/tsne.png)
