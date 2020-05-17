@@ -2,9 +2,9 @@
 ### “Guess U Like”
 
 Team:
-* Xiangyun Chu 
-* Elizabeth Combs 
-* Amber Wang 
+* [Xiangyun Chu](https://github.com/XiangyunChu) 
+* [Elizabeth Combs](https://github.com/lcombs)
+* [Amber Wang](https://github.com/Ambbbbberwang)
 
 Course:
 * New York University
